@@ -11,7 +11,7 @@
 # limitations under the License.
 
 ---
-apiVersion: v1
+apiVersion: v2
 appVersion: v1.0.0
 description: OpenStack-Helm Helm-Toolkit
 name: helm-toolkit
@@ -23,5 +23,3 @@ sources:
   - https://opendev.org/openstack/openstack-helm
 maintainers:
   - name: OpenStack-Helm Authors
-tillerVersion: ">=2.13.0"
-...
