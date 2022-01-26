@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "k8s-debug-env 部署参数",
+  "type": "object",
+  "properties": {
+      "imageRegistry": {
+        "title": "镜像仓库",
+        "form": true,
+        "type": "string",
+        "description": "镜像仓库",
+        "default": "docker.io",
+        "enum": ["registry.aliyuncs.com", "docker.io"]
+      },
+      "hostConf": {
+          "type": "object",
+          "form": true,
+          "title": "宿主机参数",
+          "properties": {
+              "nodePort": {
+                  "title": "宿主机端口",
+                  "form": true,
+                  "type": "integer",
+                  "description": "pod 映射到宿主机上的端口，可通过 ssh 访问这个端口进入 pod 容器",
+                  "default": 30022
+              },
+              "dockerSocketPath": {
+                  "title": "docker sockrt 路径",
+                  "form": true,
+                  "type": "string",
+                  "description": "如果 cri 使用的是 docker，并且想在 pod 内部执行 docker 命令控制宿主机上的容器，需要传入宿主机上的 docker sockt 的路径，如：/var/run/docker.sock",
+                  "default": ""
+              },
+              "homeDirPath": {
+                  "title": "容器 home 目录挂载路径",
+                  "form": true,
+                  "type": "string",
+                  "description": "该目录（在宿主机上）会映射为 pod 容器内的 /home 目录，pod 内唯有 /home 目录下的数据会被持久保存，后面计划使用 pv 替换 hostdir",
+                  "default": "/data/ubuntu"
+              }
+          }
+      },
+      "containerConf": {
+          "title": "配置容器用户",
+          "type": "object",
+          "form": true,
+          "properties": {
+              "userName": {
+                  "title": "用户名",
+                  "type": "string",
+                  "form": true,
+                  "description": "ssh 用户名，在 pod 启动时会自动创建",
+                  "default": "ubuntu"
+              },
+              "userGroup": {
+                  "title": "用户组",
+                  "form": true,
+                  "type": "string",
+                  "description": "用户组，pod  启动时会自动创建",
+                  "default": "ubuntu"
+              },
+              "userPassword": {
+                  "title": "密码",
+                  "form": true,
+                  "type": "string",
+                  "description": "用户密码，可以在 pod 启动后 ssh 登录修改，但是 pod 重建后会恢复该密码",
+                  "default": "ChangeMe"
+              }
+          }
+      },
+      "kubeConfig": {
+          "title": "配置 kubeconfig",
+          "type": "object",
+          "form": true,
+          "properties": {
+              "clusterName": {
+                  "title": "集群名称",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 cluster.name",
+                  "default": ""
+              },
+              "clusterApiServer": {
+                  "title": "集群 url",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 cluster.server",
+                  "default": ""
+              },
+              "clusterCaData": {
+                  "title": "集群 ca",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 cluster.certificate-authority-data，需要经过 base64 加密",
+                  "default": "",
+                  "maxLength": 4096
+              },
+              "userName": {
+                  "title": "用户名",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 users[0].name",
+                  "default": ""
+              },
+              "userPassword": {
+                  "title": "用户密码",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 users[0].user.password",
+                  "default": ""
+              },
+              "userClientCaData": {
+                  "title": "用户 ca",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 users[0].user.client-certificate-data，需要经过 base64 加密",
+                  "default": "",
+                  "maxLength": 4096
+              },
+              "userClientKeyData": {
+                  "title": "用户密钥",
+                  "form": true,
+                  "type": "string",
+                  "description": "对应 ~/.kube/config 中的 users[0].user.client-key-data，需要经过 base64 加密",
+                  "default": "",
+                  "maxLength": 4096
+              }
+          }
+      }
+  }
+}
