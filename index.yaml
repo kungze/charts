@@ -17,4 +17,25 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/helm-toolkit-0.2.31/helm-toolkit-0.2.31.tgz
     version: 0.2.31
-generated: "2022-01-24T07:40:32.663323511Z"
+  keystone:
+  - apiVersion: v2
+    appVersion: v1.0.0
+    created: "2022-01-26T01:27:24.081337902Z"
+    dependencies:
+    - name: helm-toolkit
+      repository: https://kungze.github.io/charts
+      version: '>= 0.1.0'
+    description: OpenStack-Helm Keystone
+    digest: 7a6d1f0d5be378da28bfa41129d18283c0049b2f03c43cfe28f39bae29c31966
+    home: https://docs.openstack.org/keystone/latest/
+    icon: https://www.openstack.org/themes/openstack/images/project-mascots/Keystone/OpenStack_Project_Keystone_vertical.png
+    maintainers:
+    - name: OpenStack-Helm Authors
+    name: keystone
+    sources:
+    - https://opendev.org/openstack/keystone
+    - https://opendev.org/openstack/openstack-helm
+    urls:
+    - https://github.com/kungze/charts/releases/download/keystone-0.2.18/keystone-0.2.18.tgz
+    version: 0.2.18
+generated: "2022-01-26T01:27:24.081355803Z"
