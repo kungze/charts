@@ -1,0 +1,15 @@
+apiVersion: v2
+appVersion: v2
+description: Cinder CSI Chart for OpenStack
+name: cinder-csi-plugin
+version: 1.0.0
+home: https://github.com/kungzu/cinder-csi-plugin
+icon: https://github.com/kubernetes/kubernetes/blob/master/logo/logo.png
+dependencies:
+  - name: noauth-cinder
+    repository: https://fightdou.github.io/test-charts
+    version: 1.x.x
+maintainers:
+  - name: Kungze
+annotations:
+  category: Kungze

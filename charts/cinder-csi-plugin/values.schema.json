@@ -1,0 +1,112 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+        "cloud": {
+            "type": "object",
+            "title": "The Openstack Cloud Authentication File",
+            "form": true,
+            "properties": {
+                "authStrategy": {
+                    "type": "string",
+                    "title": "The strategy to use for authentication",
+                    "form": true,
+                    "description": "The strategy to use for authentication",
+                    "default": "noauth",
+                    "enum": ["noauth", "keystone"]
+                },
+                "username": {
+                    "type": "string",
+                    "title": "Keystone authentication username",
+                    "form": true,
+                    "hidden": {
+                        "value": "noauth",
+                        "path": "cloud/authStrategy"
+                    },
+                    "description": "Keystone authentication username",
+                    "default": "admin"
+                },
+                "password": {
+                    "type": "string",
+                    "title": "Keystone authentication password",
+                    "form": true,
+                    "hidden": {
+                        "value": "noauth",
+                        "path": "cloud/authStrategy"
+                    },
+                    "description": "Keystone authentication password",
+                    "default": "password"
+                },
+                "tenantName": {
+                    "type": "string",
+                    "title": "Keystone authentication tenantName",
+                    "form": true,
+                    "hidden": {
+                        "value": "noauth",
+                        "path": "cloud/authStrategy"
+                    },
+                    "description": "Keystone authentication tenantName",
+                    "default": "admin"
+                },
+                "authUrl": {
+                    "type": "string",
+                    "title": "Keystone authentication authUrl",
+                    "form": true,
+                    "hidden": {
+                        "value": "noauth",
+                        "path": "cloud/authStrategy"
+                    },
+                    "description": "Keystone authentication authUrl",
+                    "default": "http://keystone.openstack.svc.cluster.local/v3"
+                },
+		"cinderListenAddr": {
+                    "type": "string",
+                    "title": "Cinder Api Listen Addr",
+                    "form": true,
+                    "hidden": {
+                        "value": "keystone",
+                        "path": "cloud/authStrategy"
+                    },
+                    "description": "Cinder Api Listen Addr",
+                    "default": ""
+                }
+            }
+        },
+        "ceph": {
+            "type": "object",
+            "title": "Ceph Configuration",
+            "form": true,
+            "properties": {
+                "enabledCephAuth": {
+                    "type": "boolean",
+                    "title": "Whether to enable ceph authentication",
+                    "form": true,
+                    "description": "Whether to enable ceph authentication",
+                    "default": true
+                },
+                "keyringName": {
+                    "type": "string",
+                    "title": "The user keyring name using the Ceph pool",
+                    "form": true,
+                    "hidden": {
+                        "value": false,
+                        "path": "ceph/enabledCephAuth"
+                    },
+                    "description": "The user keyring name using the Ceph pool",
+                    "default": "cinder-volume-rbd-keyring"
+                },
+                "keyring": {
+                    "type": "string",
+                    "title": "The user keyring using the Ceph pool",
+                    "form": true,
+                    "hidden": {
+                        "value": false,
+                        "path": "ceph/enabledCephAuth"
+                    },
+                    "description": "The user keyring using the Ceph pool",
+                    "default": "W2NsaWVudC5jaW5kZXJdCiAgICBrZXkgPSBBUUI0QTZwaDlNZFREUkFBZEZCdmFPYXR6a2xWUlJBcWtaSmtCZz09Cg=="
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,200 @@
+## @section Global parameters
+## @param global.nameOverride Override chart Name
+## @param global.fullnameOverride Override release Name
+## @param global.timeout The csi related container startup timeout
+global:
+  nameOverride: ""
+  fullnameOverride: ""
+  timeout: 3m
+
+## @skip csi
+csi:
+  attacher:
+    image:
+      repository: k8s.gcr.io/sig-storage/csi-attacher
+      tag: v3.3.0
+      pullPolicy: IfNotPresent
+    resources: {}
+  provisioner:
+    topology: "false"
+    image:
+      repository: k8s.gcr.io/sig-storage/csi-provisioner
+      tag: v3.0.0
+      pullPolicy: IfNotPresent
+    resources: {}
+  snapshotter:
+    image:
+      repository: k8s.gcr.io/sig-storage/csi-snapshotter
+      tag: v4.2.1
+      pullPolicy: IfNotPresent
+    resources: {}
+  resizer:
+    image:
+      repository: k8s.gcr.io/sig-storage/csi-resizer
+      tag: v1.3.0
+      pullPolicy: IfNotPresent
+    resources: {}
+  livenessprobe:
+    image:
+      repository: k8s.gcr.io/sig-storage/livenessprobe
+      tag: v2.5.0
+      pullPolicy: IfNotPresent
+    failureThreshold: 5
+    initialDelaySeconds: 10
+    timeoutSeconds: 10
+    periodSeconds: 60
+    resources: {}
+  nodeDriverRegistrar:
+    image:
+      repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+      tag: v2.4.0
+      pullPolicy: IfNotPresent
+    resources: {}
+  kubernetesEntrypoint:
+    image:
+      repository: quay.io/airshipit/kubernetes-entrypoint
+      tag: v1.0.0
+      pullPolicy: IfNotPresent
+  plugin:
+    image:
+      repository: douyali/cinder-csi-plugin
+      pullPolicy: IfNotPresent
+      tag: latest
+    volumes:
+      - name: cacert
+        hostPath:
+          path: /etc/cacert
+    volumeMounts:
+      - name: cacert
+        mountPath: /etc/cacert
+        readOnly: true
+      - name: cloud-config
+        mountPath: /etc/kubernetes/cloud-config
+        readOnly: true
+        subPath: cloud.conf
+    nodePlugin:
+      affinity: {}
+      nodeSelector: {}
+      tolerations:
+        - operator: Exists
+      kubeletDir: /var/lib/kubelet
+    controllerPlugin:
+      replicas: 1
+      strategy:
+        # RollingUpdate strategy replaces old pods with new ones gradually,
+        # without incurring downtime.
+        type: RollingUpdate
+        rollingUpdate:
+          # maxUnavailable is the maximum number of pods that can be
+          # unavailable during the update process.
+          maxUnavailable: 0
+          # maxSurge is the maximum number of pods that can be
+          # created over the desired number of pods.
+          maxSurge: 1
+      affinity: {}
+      nodeSelector: {}
+      tolerations: []
+    resources: {}
+  snapshotController:
+    enabled: false
+    image:
+      repository: k8s.gcr.io/sig-storage/snapshot-controller
+      tag: v4.2.1
+    resources: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+
+## @skip logVerbosityLevel
+# Log verbosity level.
+# See https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md
+# for description of individual verbosity levels.
+logVerbosityLevel: 2
+
+## @section Cloud configuration
+## Cloud Authentication File Configuration
+## @param cloud.authStrategy The strategy to use for authentication
+## @param cloud.username Keystone authentication username
+## @param cloud.password Keystone authentication password
+## @param cloud.tenantName Keystone authentication tenantName
+## @param cloud.authUrl Keystone authentication authUrl
+## @param cloud.cinderListerAddr Cinder api listen addr
+cloud:
+  authStrategy: noauth
+  username: admin
+  password: password
+  tenantName: admin
+  authUrl: http://keystone.openstack.svc.cluster.local/v3
+  cinderListerAddr: ""
+
+## @section Ceph Related Configuration
+## Ceph related configuration
+## @param ceph.enabledCephAuth Whether to enable cepH authentication
+## @param ceph.keyringName The user keyring name using the Ceph pool
+## @param ceph.keyring The user keyring using the Ceph pool
+## @param ceph.configMapName The ceph config file configmap name
+## @param ceph.data.cephConfig The ceph config file data
+ceph:
+  enabledCephAuth: true
+  keyringName: cinder-volume-rbd-keyring
+  keyring: W2NsaWVudC5jaW5kZXJdCiAgICBrZXkgPSBBUUI0QTZwaDlNZFREUkFBZEZCdmFPYXR6a2xWUlJBcWtaSmtCZz09Cg==
+  configMapName: ceph-etc
+  data:
+    cephConfig: |-
+      [global]
+        auth_cluster_required = cephx
+        auth_service_required = cephx
+        auth_client_required = cephx
+
+## @section Storageclass Configuration
+## Storageclass Configuration
+## @param storageClass.enabled Whether to create storageClass
+## @param storageClass.delete.isDefault Set up the storageClass reclaimpolicy to delete
+## @param storageClass.delete.allowVolumeExpansion Set up the storageClass allowVolumeExpansion
+## @param storageClass.retain.isDefault Set up the storageClass reclaimpolicy to retain
+## @param storageClass.retain.allowVolumeExpansion Set up the storageClass allowVolumeExpansion
+storageClass:
+  enabled: true
+  delete:
+    isDefault: false
+    allowVolumeExpansion: true
+  retain:
+    isDefault: false
+    allowVolumeExpansion: true
+# any kind of custom StorageClasses
+#   custom: |-
+#     ---
+#     apiVersion: storage.k8s.io/v1
+#     kind: StorageClass
+#     metadata:
+#       name: sas
+#     provisioner: cinder.csi.openstack.org
+#     volumeBindingMode: WaitForFirstConsumer
+#     allowVolumeExpansion: true
+#     parameters:
+#       type: SAS
+#     ---
+#     apiVersion: snapshot.storage.k8s.io/v1beta1
+#     kind: VolumeSnapshotClass
+#     metadata:
+#       name: csi-cinder-snapclass
+#     driver: cinder.csi.openstack.org
+#     deletionPolicy: Delete
+
+## @skip priorityClassName
+priorityClassName: ""
+
+## @section Noauth Cinder Configuration
+## Noauth Cinder Configuration
+## @param noauth-cinder.replicaCount cinder api pod replicaCount number
+## @param noauth-cinder.mariadb.enabled Whether to enable mariadb
+## @param noauth-cinder.mariadb.primary.persistence.enabled Mariadb Whether to use PVC
+## @param noauth-cinder.mariadb.primary.persistence.storageClass storageclass name
+noauth-cinder:
+  replicaCount: 1
+  mariadb:
+    enabled: true
+    primary:
+      persistence:
+        enabled: true
+        storageClass: ""
