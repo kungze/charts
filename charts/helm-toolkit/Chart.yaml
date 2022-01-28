@@ -23,3 +23,5 @@ sources:
   - https://opendev.org/openstack/openstack-helm
 maintainers:
   - name: OpenStack-Helm Authors
+annotations:
+  category: Openstack
