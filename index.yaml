@@ -1,6 +1,24 @@
 apiVersion: v1
 entries:
   helm-toolkit:
+  - annotations:
+      category: Openstack
+    apiVersion: v2
+    appVersion: v1.0.0
+    created: "2022-01-29T07:19:18.174408061Z"
+    description: OpenStack-Helm Helm-Toolkit
+    digest: 387daef9f31b0aee43829a9644f7c6d59af76fb8e28744e631346650cd2c6d92
+    home: https://docs.openstack.org/openstack-helm
+    icon: https://www.openstack.org/themes/openstack/images/project-mascots/OpenStack-Helm/OpenStack_Project_OpenStackHelm_vertical.png
+    maintainers:
+    - name: Kungze
+    name: helm-toolkit
+    sources:
+    - https://opendev.org/openstack/openstack-helm-infra
+    - https://opendev.org/openstack/openstack-helm
+    urls:
+    - https://github.com/kungze/charts/releases/download/helm-toolkit-0.2.32/helm-toolkit-0.2.32.tgz
+    version: 0.2.32
   - apiVersion: v2
     appVersion: v1.0.0
     created: "2022-01-24T07:40:32.663317011Z"
@@ -18,6 +36,28 @@ entries:
     - https://github.com/kungze/charts/releases/download/helm-toolkit-0.2.31/helm-toolkit-0.2.31.tgz
     version: 0.2.31
   keystone:
+  - annotations:
+      category: Openstack
+    apiVersion: v2
+    appVersion: v1.0.0
+    created: "2022-01-29T07:19:18.556768689Z"
+    dependencies:
+    - name: helm-toolkit
+      repository: https://kungze.github.io/charts
+      version: '>= 0.1.0'
+    description: OpenStack-Helm Keystone
+    digest: ad3611ab01e07ccc1b29724bca2c965f7917912777808f33b758632ea94e6357
+    home: https://docs.openstack.org/keystone/latest/
+    icon: https://www.openstack.org/themes/openstack/images/project-mascots/Keystone/OpenStack_Project_Keystone_vertical.png
+    maintainers:
+    - name: Kungze
+    name: keystone
+    sources:
+    - https://opendev.org/openstack/keystone
+    - https://opendev.org/openstack/openstack-helm
+    urls:
+    - https://github.com/kungze/charts/releases/download/keystone-0.2.19/keystone-0.2.19.tgz
+    version: 0.2.19
   - apiVersion: v2
     appVersion: v1.0.0
     created: "2022-01-26T01:27:24.081337902Z"
@@ -38,4 +78,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/keystone-0.2.18/keystone-0.2.18.tgz
     version: 0.2.18
-generated: "2022-01-26T01:27:24.081355803Z"
+generated: "2022-01-29T07:19:18.556784989Z"
