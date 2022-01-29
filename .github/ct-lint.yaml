@@ -1,0 +1,11 @@
+chart-dirs:
+  - charts
+chart-repos:
+  - kungze=https://kungze.github.io/charts
+check-version-increment: true
+debug: true
+remote: origin
+target-branch: main
+validate-chart-schema: true
+validate-maintainers: true
+validate-yaml: true
