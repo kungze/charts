@@ -35,6 +35,24 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/helm-toolkit-0.2.31/helm-toolkit-0.2.31.tgz
     version: 0.2.31
+  k8s-debug-env:
+  - annotations:
+      category: Kungze
+    apiVersion: v2
+    appVersion: v2
+    created: "2022-02-08T05:46:28.547830651Z"
+    description: Deploy a out of the box environment in k8s cluster for development
+      and debug
+    digest: 8afc9dcdb7e2b48eb5206f0eba7276b7b03653ba8615409d5ca4ca59a8e85569
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: k8s-debug-env
+    sources:
+    - https://github.com/kungze/charts
+    urls:
+    - https://github.com/kungze/charts/releases/download/k8s-debug-env-1.0.0/k8s-debug-env-1.0.0.tgz
+    version: 1.0.0
   keystone:
   - annotations:
       category: Openstack
@@ -78,4 +96,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/keystone-0.2.18/keystone-0.2.18.tgz
     version: 0.2.18
-generated: "2022-01-29T07:19:18.556784989Z"
+generated: "2022-02-08T05:46:28.547843651Z"
