@@ -5,6 +5,5 @@ chart-repos:
 debug: true
 excluded-charts:
   - helm-toolkit
-  - keystone
 remote: origin
 target-branch: main

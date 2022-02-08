@@ -11,20 +11,19 @@
 # limitations under the License.
 
 apiVersion: v2
-appVersion: v1.0.0
-description: OpenStack-Helm Keystone
+description: Openstack keystone service
 name: keystone
-version: 0.2.19
-home: https://docs.openstack.org/keystone/latest/
-icon: https://www.openstack.org/themes/openstack/images/project-mascots/Keystone/OpenStack_Project_Keystone_vertical.png
-sources:
-  - https://opendev.org/openstack/keystone
-  - https://opendev.org/openstack/openstack-helm
+version: 1.0.0
+home: https://kungze.github.io/charts/
 maintainers:
   - name: Kungze
 dependencies:
-  - name: helm-toolkit
+  - name: openstack-dep
+    condition: openstack-dep.enabled
     repository: https://kungze.github.io/charts
-    version: ">= 0.1.0"
+    version: 1.x.x
+  - name: common
+    repository: https://kungze.github.io/charts
+    version: 1.x.x
 annotations:
   category: Openstack

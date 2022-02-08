@@ -1,0 +1,77 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keystone-fernet-rotate
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  schedule: {{ .Values.jobs.fernet_rotate.cron | quote }}
+  successfulJobsHistoryLimit: {{ .Values.jobs.fernet_rotate.history.success }}
+  failedJobsHistoryLimit: {{ .Values.jobs.fernet_rotate.history.failed }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: keystone-fernet-rotate
+              image: {{ template "kolla.toolbox.image" . }}
+              imagePullPolicy: {{ .Values.global.pullPolicy | quote }}
+              env:
+                - name: KEYSTONE_USER
+                  value: {{ .Values.jobs.fernet_rotate.user | quote }}
+                - name: KEYSTONE_GROUP
+                  value: {{ .Values.jobs.fernet_rotate.group | quote }}
+                - name: KUBERNETES_NAMESPACE
+                  value: {{ .Release.Namespace | quote }}
+                - name: KEYSTONE_KEYS_REPOSITORY
+                  value: /etc/keystone/fernet-keys/
+                - name: KEYSTONE_fernet_MIGRATE_WAIT
+                  value: {{ .Values.jobs.fernet_rotate.migrate_wait | quote }}
+              command:
+                - /bin/sh
+                - -c
+                - python3 /tmp/fernet-manage.py fernet_rotate
+              volumeMounts:
+                - name: pod-tmp
+                  mountPath: /tmp
+                - name: keystone-bin
+                  mountPath: /tmp/fernet-manage.py
+                  subPath: fernet-manage.py
+                  readOnly: true
+          initContainers:
+            - command:
+              - kubernetes-entrypoint
+              name: init
+              image: {{ template "entrypoint.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+              env:
+              - name: POD_NAME
+                valueFrom:
+                  fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.name
+              - name: NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.namespace
+              - name: INTERFACE_NAME
+                value: eth0
+              - name: PATH
+                value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+              - name: DEPENDENCY_JOBS
+                value: {{ include "common.utils.joinListWithComma" .Values.dependencies.fernet_rotate.jobs }}
+              - name: DEPENDENCY_DAEMONSET
+              - name: DEPENDENCY_CONTAINER
+              - name: DEPENDENCY_POD_JSON
+              - name: DEPENDENCY_CUSTOM_RESOURCE
+          restartPolicy: OnFailure
+          serviceAccount: {{ .Values.serviceAccountName}}
+          serviceAccountName: {{ .Values.serviceAccountName}}
+          volumes:
+            - name: pod-tmp
+              emptyDir: {}
+            - name: keystone-bin
+              configMap:
+                name: keystone-bin
+                defaultMode: 493

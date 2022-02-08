@@ -1,0 +1,3 @@
+{{- $envAll := index . -}}
+{{- $cmRenderJob := dict "envAll" . "serviceName" "keystone" "dbUserPasswordName" "keystone-database-password" -}}
+{{ $cmRenderJob | include "common.manifests.job_cm_render" }}
