@@ -1,0 +1,77 @@
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+    spec:
+      initContainers:
+        - command:
+          - kubernetes-entrypoint
+          name: init
+          image: {{ template "entrypoint.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INTERFACE_NAME
+            value: eth0
+          - name: PATH
+            value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+          - name: DEPENDENCY_JOBS
+            value: {{ include "joinListWithComma" .Values.dependencies.api.jobs }}
+      containers:
+        - name: cinder-api
+          image: {{ template "cinder.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          command:
+            - /tmp/cinder-api.sh
+            - start
+          env:
+            - name: MARIADB_HOST
+              value: {{ include "cinder.databaseHost" . | quote }}
+            - name: MARIADB_PORT_NUMBER
+              value: {{ include "cinder.databasePort" . | quote }}
+            - name: CINDER_DATABASE_NAME
+              value: {{ include "cinder.databaseName" . | quote }}
+            - name: CINDER_DATABASE_USER
+              value: {{ include "cinder.databaseUser" . | quote }}
+            - name: CINDER_DATABASE_PASSWORD
+              value: {{ include "cinder.databasePassword" . | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPorts.http }}
+          volumeMounts:
+          - mountPath: /etc/cinder/cinder.conf
+            name: cinder-configmap
+            readOnly: true
+            subPath: cinderConfig
+          - mountPath: /tmp/cinder-api.sh
+            name: cinder-configmap
+            readOnly: true
+            subPath: cinder-api.sh
+      serviceAccount: cinder-api
+      serviceAccountName: cinder-api
+      volumes:
+      - emptyDir: {}
+        name: pod-tmp
+      - configMap:
+          defaultMode: 365
+          name: {{ include "common.names.fullname" . }}
+        name: cinder-configmap
+
