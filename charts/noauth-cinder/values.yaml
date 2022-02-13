@@ -1,0 +1,259 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+##
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  imagePullSecrets: []
+  storageClass: ""
+
+## @section Moodle&trade; parameters
+
+## Bitnami Moodle&trade; image version
+## ref: https://hub.docker.com/r/bitnami/moodle/tags/
+## @param image.registry Moodle image registry
+## @param image.repository Moodle image repository
+## @param image.tag Moodle image tag (immutable tags are recommended)
+## @param image.pullPolicy Moodle image pull policy
+## @param image.pullSecrets Specify docker-registry secret names as an array
+## @param image.debug Specify if debug logs should be enabled
+##
+image:
+  registry: docker.io
+  repository: douyali/cinder-api
+  tag: latest
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## e.g:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Set to true if you would like to see extra information on logs
+  ##
+  debug: false
+## @param entrypointImage.registry Moodle image registry
+## @param entrypointImage.repository Moodle image repository
+## @param entrypointImage.tag Moodle image tag (immutable tags are recommended)
+## @param entrypointImage.pullPolicy Moodle image pull policy
+## @param entrypointImage.pullSecrets Specify docker-registry secret names as an array
+## @param entrypointImage.debug Specify if debug logs should be enabled
+entrypointImage:
+  registry: quay.io
+  repository: airshipit/kubernetes-entrypoint
+  tag: v1.0.0
+  ## Specify a imagePullPolicy
+  ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+  ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+  ##
+  pullPolicy: IfNotPresent
+  ## Optionally specify an array of imagePullSecrets.
+  ## Secrets must be manually created in the namespace.
+  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  ## e.g:
+  ## pullSecrets:
+  ##   - myRegistryKeySecretName
+  ##
+  pullSecrets: []
+  ## Set to true if you would like to see extra information on logs
+  ##
+  debug: false
+## @param replicaCount Number of Moodle replicas (requires ReadWriteMany PVC support)
+##
+replicaCount: 1
+## Container ports
+## @param containerPorts.http Cinder HTTP container port
+##
+containerPorts:
+  http: 8776
+
+## @section Traffic Exposure Parameters
+
+## Cinder service parameters
+##
+service:
+  ## @param service.type Cinder service type
+  ##
+  type: ClusterIP
+  ## @param service.port Cinder service HTTP port
+  ##
+  port: 8776
+  ## @param service.httpsPort Cinder service HTTPS port
+  ##
+  httpsPort: 443
+  ## @param service.httpsTargetPort Target port for HTTPS
+  ##
+  httpsTargetPort: https
+  ## Node ports to expose
+  ## @param service.nodePorts.http Node port for HTTP
+  ## NOTE: choose port between <30000-32767>
+  ##
+  nodePorts:
+    http: ""
+  ## @param service.clusterIP Cinder service Cluster IP
+  ## e.g.:
+  ## clusterIP: None
+  ##
+  clusterIP: ""
+  ## @param service.loadBalancerIP Cinder service Load Balancer IP
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+  ##
+  loadBalancerIP: ""
+  ## @param service.loadBalancerSourceRanges Cinder service Load Balancer sources
+  ## ref: https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+  ## e.g:
+  ## loadBalancerSourceRanges:
+  ##   - 10.10.10.0/24
+  ##
+  loadBalancerSourceRanges: []
+  ## @param service.externalTrafficPolicy Cinder service external traffic policy
+  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  ##
+  externalTrafficPolicy: Cluster
+  ## @param service.annotations Additional custom annotations for Cinder service
+  ##
+  annotations: {}
+  ## @param service.extraPorts Extra port to expose on Cinder service
+  ##
+  extraPorts: []
+## Configure the ingress resource that allows you to access the Cinder installation
+## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
+##
+
+## @skip dependencies
+dependencies:
+  api:
+    jobs:
+      - cinder-db-sync
+  db_sync:
+    pod:
+      - requireSameNode: false
+        labels:
+          app.kubernetes.io/name: mariadb
+
+## @section Noauth Cinder API Config File Parameters
+## Cinder conf parameters
+##
+conf:
+  ## Cinder Api File configuration
+  ## @param conf.cinder.auth_strategy Auth strategy for cinder api
+  ## @param conf.cinder.auth_type Auth type for cinder api
+  cinder:
+    auth_strategy: noauth
+    auth_type: none
+
+## @section Noauth Cinder API Autoscaling configuration
+## Cinder Autoscaling configuration
+## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+## @param autoscaling.enabled Enable Horizontal POD autoscaling for WordPress
+## @param autoscaling.minReplicas Minimum number of WordPress replicas
+## @param autoscaling.maxReplicas Maximum number of WordPress replicas
+## @param autoscaling.targetCPU Target CPU utilization percentage
+## @param autoscaling.targetMemory Target Memory utilization percentage
+##
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 11
+  targetCPU: 50
+  targetMemory: 50
+
+## @section Database parameters
+
+## MariaDB chart configuration
+## https://github.com/bitnami/charts/blob/master/bitnami/mariadb/values.yaml
+##
+mariadb:
+  ## @param mariadb.enabled Whether to deploy a mariadb server to satisfy the applications database requirements
+  ## To use an external database set this to false and configure the externalDatabase parameters
+  ##
+  enabled: true
+  ## @param mariadb.architecture MariaDB architecture. Allowed values: `standalone` or `replication`
+  ##
+  architecture: standalone
+  ## MariaDB Authentication parameters
+  ##
+  auth:
+    ## @param mariadb.auth.rootPassword Password for the MariaDB `root` user
+    ## ref: https://github.com/bitnami/bitnami-docker-mariadb#setting-the-root-password-on-first-run
+    ##
+    rootPassword: ""
+    ## @param mariadb.auth.database Database name to create
+    ## ref: https://github.com/bitnami/bitnami-docker-mariadb/blob/master/README.md#creating-a-database-on-first-run
+    ##
+    database: cinder
+    ## @param mariadb.auth.username Database user to create
+    ## ref: https://github.com/bitnami/bitnami-docker-mariadb/blob/master/README.md#creating-a-database-user-on-first-run
+    ##
+    username: cinder
+    ## @param mariadb.auth.password Password for the database
+    ##
+    password: "123456"
+  primary:
+    ## Enable persistence using Persistent Volume Claims
+    ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+    ##
+    persistence:
+      ## @param mariadb.primary.persistence.enabled Enable database persistence using PVC
+      ##
+      enabled: true
+      ## @param mariadb.primary.persistence.storageClass MariaDB primary persistent volume storage Class
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      storageClass: ""
+      ## @param mariadb.primary.persistence.accessModes Database Persistent Volume Access Modes
+      ##
+      accessModes:
+        - ReadWriteOnce
+      ## @param mariadb.primary.persistence.size Database Persistent Volume Size
+      ##
+      size: 8Gi
+      ## @param mariadb.primary.persistence.hostPath Set path in case you want to use local host path volumes (not recommended in production)
+      ##
+      hostPath: ""
+      ## @param mariadb.primary.persistence.existingClaim Name of an existing `PersistentVolumeClaim` for MariaDB primary replicas
+      ##
+      existingClaim: ""
+## External Database Configuration
+## All of these values are only used if `mariadb.enabled=false`
+##
+externalDatabase:
+  ## @param externalDatabase.host External Database server host
+  ##
+  host: localhost
+  ## @param externalDatabase.port External Database server port
+  ##
+  port: 3306
+  ## @param externalDatabase.user External Database username
+  ##
+  user: cinder
+  ## @param externalDatabase.password External Database user password
+  ##
+  password: ""
+  ## @param externalDatabase.database External Database database name
+  ##
+  database: cinder
+  ## @param externalDatabase.existingSecret The name of an existing secret with database credentials
+  ## NOTE: Must contain key `mariadb-password`
+  ## NOTE: When it's set, the `externalDatabase.password` parameter is ignored
+  ##
+  existingSecret: ""

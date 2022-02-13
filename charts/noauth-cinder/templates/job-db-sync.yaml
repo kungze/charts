@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cinder-db-sync
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+    spec:
+      containers:
+        - name: cinder-db-sync
+          image: {{ template "cinder.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - /tmp/sync-db.sh
+          volumeMounts:
+          - mountPath: /tmp
+            name: pod-tmp
+          - mountPath: /etc/cinder/cinder.conf
+            name: cinder-configmap
+            subPath: cinderConfig
+          - mountPath: /tmp/sync-db.sh
+            name: cinder-configmap
+            subPath: sync-db.sh
+      initContainers:
+        - name: init
+          image: {{ template "entrypoint.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          command:
+            - kubernetes-entrypoint
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: PATH
+              value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+            - name: DEPENDENCY_POD_JSON
+              value: {{ toJson .Values.dependencies.db_sync.pod | quote }}
+      restartPolicy: OnFailure
+      serviceAccount: cinder-db-sync
+      serviceAccountName: cinder-db-sync
+      volumes:
+      - emptyDir: {}
+        name: pod-tmp
+      - configMap:
+          defaultMode: 365
+          name: {{ include "common.names.fullname" . }}
+        name: cinder-configmap
