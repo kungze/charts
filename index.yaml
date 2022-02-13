@@ -96,4 +96,29 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/keystone-0.2.18/keystone-0.2.18.tgz
     version: 0.2.18
-generated: "2022-02-08T05:46:28.547843651Z"
+  noauth-cinder:
+  - annotations:
+      category: Openstack
+    apiVersion: v2
+    appVersion: v2
+    created: "2022-02-13T06:38:06.050032317Z"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 1.x.x
+    description: Deploy openstack cinder noauth service
+    digest: 0ed51f203230adb720f390bb30978a02f9851018eedbbc7b84b2006915c1cb9b
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: noauth-cinder
+    urls:
+    - https://github.com/kungze/charts/releases/download/noauth-cinder-1.0.0/noauth-cinder-1.0.0.tgz
+    version: 1.0.0
+generated: "2022-02-13T06:38:06.050049817Z"
