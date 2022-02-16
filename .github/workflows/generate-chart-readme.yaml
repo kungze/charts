@@ -12,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout bitnami-labs/readme-generator-for-helm
+      - name: Checkout kungze/readme-generator-for-helm
         uses: actions/checkout@v2
         with:
-          repository: 'bitnami-labs/readme-generator-for-helm'
+          repository: 'kungze/readme-generator-for-helm'
+          ref: 'kungze'
           path: readme-generator-for-helm
 
       - name: Cache node modules
