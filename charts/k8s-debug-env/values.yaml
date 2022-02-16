@@ -17,42 +17,45 @@
 
 ---
 ## @section 镜像仓库
-## @param imageRegistry 镜像仓库，国内的可以换成 registry.aliyuncs.com
+## @param imageRegistry [t#仓库地址] 镜像仓库，国内的可以换成 registry.aliyuncs.com
 imageRegistry: "docker.io"
 
+## @section  存储配置
+## @param storageClass [t#存储类] 用于申请 pv 挂载 /home 目录
+## @param stroageSize [t#存储大小 (G)] 申请的存储空间大小
+storageClass: "local-path"
+storageSize: 8
+
 ## @section 宿主机相关参数
-## @param hostConf.nodePort pod 映射到宿主机上的端口，可通过 ssh 访问这个端口进入 pod 容器
-## @param hostConf.dockerSocketPath 如果 cri 使用的是 docker，并且想在 pod 内部执行 docker 命令控制宿主机上的容器，需要传入宿主机上的 docker sockt 的路径，如：/var/run/docker.sock
-## @param hostConf.homeDirPath 该目录（在宿主机上）会映射为 pod 容器内的 /home 目录，pod 内唯有 /home 目录下的数据会被持久保存，后面计划使用 pv 替换 hostdir
+## @param hostConf.nodePort [t#Node port] pod 映射到宿主机上的端口，可通过 ssh 访问这个端口进入 pod 容器
+## @param hostConf.dockerSocketPath [t#docker socket] 如果 cri 使用的是 docker，并且想在 pod 内部执行 docker 命令控制宿主机上的容器，需要传入宿主机上的 docker sockt 的路径，如：/var/run/docker.sock
 hostConf:
   nodePort: 30022
-  homeDirPath: /data/ubuntu
   dockerSocketPath: ""
 
 ## @section 容器内用户和用户组
-## @param containerConf.userName ssh 用户名，在 pod 启动时会自动创建
-## @param containerConf.userGroup  用户组，pod  启动时会自动创建
-## @param containerConf.userPassword 用户密码，可以在 pod 启动后 ssh 登录修改，但是 pod 重建后会恢复该密码
+## @param containerConf.userName [t#用户名] ssh 用户名，在 pod 启动时会自动创建
+## @param containerConf.userGroup [t#用户组] 用户组，pod  启动时会自动创建
+## @param containerConf.userPassword [t#密码] 用户密码，可以在 pod 启动后 ssh 登录修改，但是 pod 重建后会恢复该密码
 containerConf:
   userName: ubuntu
   userGroup: ubuntu
   userPassword: ChangeMe
 
 ## @section 配置 kubeconfig
-
 ## 借助 kubectl config 命令生成 ~/.kube/config 文件
 kubeConfig:
-  ## @param kubeConfig.clusterName 对应 ~/.kube/config 中的 cluster.name
-  clusterName: ""
-  ## @param kubeConfig.clusterApiServer 对应 ~/.kube/config 中的 cluster.server
+  ## @param kubeConfig.clusterName [t#集群名称] 对应 ~/.kube/config 中的 cluster.name
+  clusterName: "mycluster"
+  ## @param kubeConfig.clusterApiServer [t#K8s api 服务地址] 对应 ~/.kube/config 中的 cluster.server
   clusterApiServer: ""
-  ## @param kubeConfig.clusterCaData 对应 ~/.kube/config 中的 cluster.certificate-authority-data，需要经过 base64 加密
+  ## @param kubeConfig.clusterCaData [t#Cluster CA] 对应 ~/.kube/config 中的 cluster.certificate-authority-data，需要经过 base64 加密
   clusterCaData: ""
-  ## @param kubeConfig.userName 对应 ~/.kube/config 中的 users[0].name
+  ## @param kubeConfig.userName [t#User name] 对应 ~/.kube/config 中的 users[0].name
   userName: ""
-  ## @param kubeConfig.userPassword 对应 ~/.kube/config 中的 users[0].user.password
+  ## @param kubeConfig.userPassword [t#User password] 对应 ~/.kube/config 中的 users[0].user.password
   userPassword: ""
-  ## @param kubeConfig.userClientCaData 对应 ~/.kube/config 中的 users[0].user.client-certificate-data，需要经过 base64 加密
+  ## @param kubeConfig.userClientCaData [t#Client CA] 对应 ~/.kube/config 中的 users[0].user.client-certificate-data，需要经过 base64 加密
   userClientCaData: ""
-  ## @param kubeConfig.userClientKeyData 对应 ~/.kube/config 中的 users[0].user.client-key-data，需要经过 base64 加密
+  ## @param kubeConfig.userClientKeyData [t#Client key] 对应 ~/.kube/config 中的 users[0].user.client-key-data，需要经过 base64 加密
   userClientKeyData: ""

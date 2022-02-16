@@ -60,10 +60,8 @@ spec:
           - mountPath: /var/run/docker.sock
             name: docker-socket
           {{- end }}
-          {{- if not (empty .Values.hostConf.homeDirPath) }}
           - mountPath: /home
             name: home-dir
-          {{- end }}
         ports:
         - containerPort: 22
       volumes:
@@ -73,9 +71,16 @@ spec:
           path: {{ .Values.hostConf.dockerSocketPath }}
           type: Socket
       {{- end }}
-      {{- if not (empty .Values.hostConf.homeDirPath) }}
-      - name: home-dir
-        hostPath:
-          path: {{ .Values.hostConf.homeDirPath }}
-          type: DirectoryOrCreate
-      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: home-dir
+        labels: 
+          app.kubernetes.io/name: "k8s-debug-env"
+          app.kubernetes.io/instance: {{ .Release.Namespace | quote }}
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: {{ .Values.storageSize | quote }}
+        storageClassName: {{ .Values.storageClass | quote }}
