@@ -1,5 +1,19 @@
 apiVersion: v1
 entries:
+  gen-password:
+  - annotations:
+      category: Openstack
+    apiVersion: v2
+    created: "2022-02-23T00:14:46.854357083Z"
+    description: Automatic generation openstack relate password
+    digest: 6981ab7cf5fa37c22f22f0edf60ba1a5c72580384ed97705be2177022f679bc8
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: gen-password
+    urls:
+    - https://github.com/kungze/charts/releases/download/gen-password-1.0.0/gen-password-1.0.0.tgz
+    version: 1.0.0
   helm-toolkit:
   - annotations:
       category: Openstack
@@ -121,4 +135,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/noauth-cinder-1.0.0/noauth-cinder-1.0.0.tgz
     version: 1.0.0
-generated: "2022-02-13T06:38:06.050049817Z"
+generated: "2022-02-23T00:14:46.854367983Z"
