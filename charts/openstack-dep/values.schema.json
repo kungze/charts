@@ -1,0 +1,123 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+        "gen-password": {
+            "type": "object",
+            "title": "Gen-password Details",
+            "form": true,
+            "properties": {
+                "secretName": {
+		            "title": "secret 名称",
+                    "form": true,
+                    "type": "string",
+                    "description": "Auto generate openstack password secret name",
+                    "default": "openstack-password"
+                }
+            }
+        },
+        "mariadb": {
+            "type": "object",
+            "title": "MariaDB Details",
+            "form": true,
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "title": "部署 mariadb",
+                    "form": true,
+                    "description": "Whether to deploy a mariadb server to satisfy the applications database requirements. To use an external database switch this off and configure the external database details"
+                },
+                "architecture": {
+                    "form": true,
+                    "type": "string",
+                    "description": "MariaDB architecture. Allowed values: `standalone` or `replication`",
+                    "title": "MariaDB 架构",
+                    "hidden": {
+                        "value": false,
+                        "path": "mariadb/enabled"
+                    },
+                    "default": "standalone",
+                    "enum": ["standalone", "replication"]
+                },
+                "auth": {
+                    "type": "object",
+                    "title": "Mariadb Auth",
+                    "form": true,
+                    "properties": {
+                        "existingSecret": {
+                            "type": "string",
+                            "title": "Use existing secret for password details",
+                            "form": true,
+                            "hidden": {
+                                "value": false,
+                                "path": "mariadb/enabled"
+                            },
+                            "defalut": "openstack-password"
+                        }
+                    }
+                }
+            }
+        },
+        "rabbitmq": {
+            "type": "object",
+            "title": "Rabbitmq Details",
+            "form": true,
+            "properties": {
+                "enabled": {
+                    "form": true,
+                    "type": "boolean",
+                    "description": "Enable/disable rabbitmq chart installation",
+                    "title": "部署 Rabbitmq",
+                    "default": true
+                },
+                "auth": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "form": true,
+                            "type": "string",
+                            "description": "Rabbitmq username",
+                            "title": "Rabbitmq 用户名",
+                            "default": "openstack"
+                        },
+                        "password": {
+                            "form": true,
+                            "type": "string",
+                            "description": "Rabbitmq password",
+                            "title": "Rabbitmq 密码",
+                            "default": "openstack"
+                        }
+                    }
+                }
+            }
+        },
+        "memcached": {
+            "type": "object",
+            "title": "Memcached Details",
+            "form": true,
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "title": "部署 memcached",
+                    "form": true,
+                    "description": "Enable/disable memcached chart installation.",
+                    "default": true
+                }
+            }
+        },
+        "nginx-ingress-controller": {
+            "type": "object",
+            "title": "Nginx-ingress-controller Details",
+            "form": true,
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "form": true,
+                    "title": "部署 nginx-ingress-controller",
+                    "description": "Deploy a ingress controller server",
+                    "default": true
+                }
+            }
+        }
+    }
+}
