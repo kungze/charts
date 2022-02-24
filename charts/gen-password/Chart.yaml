@@ -13,7 +13,7 @@
 apiVersion: v2
 description: Automatic generation openstack relate password
 name: gen-password
-version: 1.0.0
+version: 1.0.1
 home: https://kungze.github.io/charts/
 maintainers:
   - name: Kungze
