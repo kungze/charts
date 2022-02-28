@@ -1,0 +1,171 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ovn-central
+  labels:
+    kungze/app: ovn-central
+spec:
+  replicas: 3
+  serviceName: ovn-central
+  selector:
+    matchLabels:
+      kungze/app: ovn-central
+  template:
+    metadata:
+      labels:
+        kungze/app: ovn-central
+    spec:
+      containers:
+        - name: ovn-nb-db
+          command: ["dumb-init", "--single-child", "--", "/start-ovn-nb.sh"]
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-nb-db-server:master
+          volumeMounts:
+            - name: config
+              mountPath: "/start-ovn-nb.sh"
+              subPath: start-ovn-nb.sh
+            - name: ovn-nb-db
+              mountPath: "/var/lib/openvswitch/ovn-nb/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-nb-db"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+        - name: ovn-sb-db
+          command: ["dumb-init", "--single-child", "--", "/start-ovn-sb.sh"]
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-sb-db-server:master
+          volumeMounts:
+            - name: config
+              mountPath: "/start-ovn-sb.sh"
+              subPath: start-ovn-sb.sh
+            - name: ovn-sb-db
+              mountPath: "/var/lib/openvswitch/ovn-sb/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-sb-db"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+        - name: ovn-northd
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-northd:master
+          command: ["dumb-init", "--single-child", "--", "/start-ovn-northd.sh"]
+          volumeMounts:
+            - name: config
+              mountPath: "/start-ovn-northd.sh"
+              subPath: start-ovn-northd.sh
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-northd"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+      volumes:
+        - name: config
+          configMap:
+            defaultMode: 0755
+            name: ovn-conf
+  volumeClaimTemplates:
+    - metadata:
+        name: ovn-nb-db
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "local-path"
+        resources:
+          requests:
+            storage: 5Gi
+    - metadata:
+        name: ovn-sb-db
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "local-path"
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ovn-central
+spec:
+  selector:
+    kungze/app: ovn-central
+  ports:
+    - name: "6641" 
+      protocol: TCP 
+      port: 6641
+      targetPort: 6641
+    - name: "6642" 
+      protocol: TCP 
+      port: 6642
+      targetPort: 6642
+    - name: "6643" 
+      protocol: TCP 
+      port: 6643
+      targetPort: 6643
+    - name: "6644" 
+      protocol: TCP 
+      port: 6644
+      targetPort: 6644
+  clusterIP: "None"

@@ -1,0 +1,213 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ovn-node
+  labels:
+    kungze/app: ovn-node
+spec:
+  selector:
+    matchLabels:
+      kungze/app: ovn-node
+  template:
+    metadata:
+      labels:
+        kungze/app: ovn-node
+    spec:
+      hostNetwork: true
+      containers:
+        - name: openvswitch-vswitchd
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-openvswitch-vswitchd:master
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - "sh"
+                  - "-c"
+                  - >
+                    ovs-dpctl del-dp ovs-system;
+                    rmmod openvswitch;
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: openvswitch-vswitchd.json
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/start-ovs"
+              subPath: start-ovs
+            - name: run-openvswitch
+              mountPath: "/run/openvswitch/"
+            - name: lib-modules
+              mountPath: "/lib/modules"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "openvswitch-vswitchd"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+        - name: openvswitch-db
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-openvswitch-db-server:master
+          securityContext:
+            privileged: true
+          lifecycle:
+            postStart:
+              exec:
+                command: 
+                  - "sh"
+                  - "-c"
+                  - >
+                    sleep 2;
+                    ovs-vsctl add-br br-ex;
+                    ovs-vsctl add-port br-ex $EXTERNAL_INTERFACE;
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: openvswitch-db-server.json
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/start-ovsdb-server"
+              subPath: start-ovsdb-server
+            - name: run-openvswitch
+              mountPath: "/run/openvswitch/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "openvswitch-db"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: EXTERNAL_INTERFACE
+              value: "ens10"
+        - name: ovn-controller
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-controller:master
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: ovn-controller.json
+            - name: run-openvswitch
+              mountPath: "/run/openvswitch/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-controller"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+        - name: kolla-toolbox
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-kolla-toolbox:master
+          securityContext:
+            privileged: true
+          lifecycle:
+            postStart:
+              exec:
+                command: 
+                  - "sh"
+                  - "-c"
+                  - >
+                    sleep 3;
+                    tunnel_interface_address=`ip a|grep $TUN_INTERFACE|grep inet|awk '{print $2}'|awk -F'/' '{print $1}'`;
+                    system_id=$HOST_IP;
+                    chassis_mac=`ip link show $EXTERNAL_INTERFACE|grep "link/ether"|awk '{print $2}'|awk -F':' '{printf "52:54:00:%s:%s:%s", $(NF-2),$(NF-1),$NF}'`;
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=system-id value=$system_id state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=other_config key=hw-offload value=true state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_bridge -a "bridge='br-int' state='present' fail_mode='secure'";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-encap-ip value=$tunnel_interface_address state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-encap-type value=geneve state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-remote value=tcp:ovn-central-0.ovn-central.default.svc.cluster.local:6642,tcp:ovn-central-1.ovn-central.default.svc.cluster.local:6642,tcp:ovn-central-2.ovn-central.default.svc.cluster.local:6642 state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-remote-probe-interval value=60000 state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-bridge-mappings value=physnet:br-ex state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-chassis-mac-mappings value=physnet:$chassis_mac state=present";
+                    sudo /opt/ansible/bin/ansible localhost -m openvswitch_db -a "table=Open_vSwitch record=. col=external_ids key=ovn-cms-options value=enable-chassis-as-gw state=present";
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: kolla-toolbox.json
+            - name: config
+              mountPath: "/etc/sudoers.d/kolla_ansible_sudoers"
+              subPath: kolla-toolbox-sudoer
+            - name: run-openvswitch
+              mountPath: "/run/openvswitch/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: ANSIBLE_LIBRARY
+              value: /usr/share/ansible
+            - name: KOLLA_SERVICE_NAME
+              value: "kolla-toolbox"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: EXTERNAL_INTERFACE
+              value: "ens10"
+            - name: TUN_INTERFACE
+              value: "ens9"
+      volumes:
+        - name: config
+          configMap:
+            name: ovn-conf
+        - name: run-openvswitch
+          emptyDir: {}
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory

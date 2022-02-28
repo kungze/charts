@@ -1,0 +1,145 @@
+apiVersion: v1
+data:
+  kolla-toolbox-sudoer: |
+    ansible ALL=(ALL) NOPASSWD: ALL
+  kolla-toolbox.json: |
+    {
+        "command": "sleep infinity",
+        "permissions": [
+            {
+                "path": "/var/log/kolla/ansible.log",
+                "perm": "0664",
+                "owner": "ansible:kolla"
+            }
+        ]
+    }
+  openvswitch-db-server.json: |
+    {
+        "command": "start-ovsdb-server 127.0.0.1",
+        "config_files": [
+            {
+                "source": "/var/lib/kolla/config_files/start-ovsdb-server",
+                "dest": "/usr/local/bin/start-ovsdb-server",
+                "owner": "root",
+                "perm": "0655"
+            }
+        ]
+    }
+  openvswitch-vswitchd.json: |
+    {
+        "command": "start-ovs",
+        "config_files": [
+            {
+                "source": "/var/lib/kolla/config_files/start-ovs",
+                "dest": "/usr/local/bin/start-ovs",
+                "owner": "root",
+                "perm": "0655"
+            }
+        ]
+    }
+  ovn-controller.json: |
+    {
+        "command": "/usr/bin/ovn-controller --pidfile=/run/ovn/ovn-controller.pid --log-file=/var/log/kolla/openvswitch/ovn-controller.log tcp:127.0.0.1:6640",
+        "permissions": [
+            {
+                "path": "/var/log/kolla/openvswitch",
+                "owner": "root:root",
+                "recurse": true
+            }
+        ]
+    }
+  start-ovn-nb.sh: |
+    #!/usr/bin/env bash
+
+    set -x
+
+    mkdir -p /run/ovn
+    mkdir -p /var/log/kolla/openvswitch
+
+    if [ "$POD_NAME" == "ovn-central-0" ]; then
+        /usr/share/ovn/scripts/ovn-ctl run_nb_ovsdb \
+            --db-nb-create-insecure-remote=yes \
+            --db-nb-addr=$POD_IP \
+            --db-nb-cluster-local-addr=$POD_IP \
+            --db-nb-sock=/run/ovn/ovnnb_db.sock \
+            --db-nb-pid=/run/ovn/ovnnb_db.pid \
+            --db-nb-file=/var/lib/openvswitch/ovn-nb/ovnnb.db \
+            --ovn-nb-logfile=/var/log/kolla/openvswitch/ovn-nb-db.log
+    else
+        /usr/share/ovn/scripts/ovn-ctl run_nb_ovsdb \
+            --db-nb-create-insecure-remote=yes \
+            --db-nb-addr=$POD_IP \
+            --db-nb-cluster-local-addr=$POD_IP \
+            --db-nb-cluster-remote-addr=ovn-central-0.ovn-central.default.svc.cluster.local \
+            --db-nb-sock=/run/ovn/ovnnb_db.sock \
+            --db-nb-pid=/run/ovn/ovnnb_db.pid \
+            --db-nb-file=/var/lib/openvswitch/ovn-nb/ovnnb.db \
+            --ovn-nb-logfile=/var/log/kolla/openvswitch/ovn-nb-db.log
+    fi
+  start-ovn-northd.sh: |
+    #!/usr/bin/env bash
+
+    set -x
+
+    mkdir -p /run/ovn
+    mkdir -p /var/log/kolla/openvswitch
+
+    /usr/bin/ovn-northd -vconsole:emer -vsyslog:err -vfile:info \
+        --ovnnb-db=tcp:ovn-central-0.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-1.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-2.ovn-central.default.svc.cluster.local:6641 \
+        --ovnsb-db=tcp:ovn-central-0.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-1.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-2.ovn-central.default.svc.cluster.local:6641 \
+        --log-file=/var/log/kolla/openvswitch/ovn-northd.log \
+        --pidfile=/run/ovn/ovn-northd.pid \
+        --unixctl=/run/ovn/ovn-northd.ctl
+  start-ovn-sb.sh: |
+    #!/usr/bin/env bash
+
+    set -x
+
+    mkdir -p /run/ovn
+    mkdir -p /var/log/kolla/openvswitch
+
+    if [ "$POD_NAME" == "ovn-central-0" ]; then
+        /usr/share/ovn/scripts/ovn-ctl run_sb_ovsdb \
+            --db-sb-create-insecure-remote=yes \
+            --db-sb-addr=$POD_IP \
+            --db-sb-cluster-local-addr=$POD_IP  \
+            --db-sb-sock=/run/ovn/ovnsb_db.sock \
+            --db-sb-pid=/run/ovn/ovnsb_db.pid \
+            --db-sb-file=/var/lib/openvswitch/ovn-sb/ovnsb.db \
+            --ovn-sb-logfile=/var/log/kolla/openvswitch/ovn-sb-db.log
+    else
+        /usr/share/ovn/scripts/ovn-ctl run_sb_ovsdb \
+            --db-sb-create-insecure-remote=yes \
+            --db-sb-addr=$POD_IP \
+            --db-sb-cluster-local-addr=$POD_IP \
+            --db-sb-cluster-remote-addr=ovn-central-0.ovn-central.default.svc.cluster.local \
+            --db-sb-sock=/run/ovn/ovnsb_db.sock \
+            --db-sb-pid=/run/ovn/ovnsb_db.pid \
+            --db-sb-file=/var/lib/openvswitch/ovn-sb/ovnsb.db \
+            --ovn-sb-logfile=/var/log/kolla/openvswitch/ovn-sb-db.log
+    fi
+  start-ovs: |
+    #!/usr/bin/env bash
+    /usr/sbin/ovs-vswitchd unix:/run/openvswitch/db.sock -vconsole:emer -vsyslog:err -vfile:info --mlockall --log-file=/var/log/kolla/openvswitch/ovs-vswitchd.log --pidfile
+  start-ovsdb-server: |
+    #!/bin/bash
+
+    # NOTE(mnasiadka): ensure existing ovsdb doesn't need to be upgraded
+
+    if ([ -f /var/lib/openvswitch/conf.db ] && [ `ovsdb-tool needs-conversion /var/lib/openvswitch/conf.db` == "yes" ]); then
+      /usr/bin/ovsdb-tool convert /var/lib/openvswitch/conf.db
+    fi
+
+    ovsdb_ip=$1
+
+    /usr/sbin/ovsdb-server /var/lib/openvswitch/conf.db -vconsole:emer -vsyslog:err -vfile:info --remote=punix:/run/openvswitch/db.sock --remote=ptcp:6640:$ovsdb_ip --remote=db:Open_vSwitch,Open_vSwitch,manager_options --log-file=/var/log/kolla/openvswitch/ovsdb-server.log --pidfile
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"start-ovn-nb.sh":"#!/usr/bin/env bash\n\nmkdir -p /run/ovn\nmkdir -p /var/log/kolla/openvswitch\n\nif [ \"$POD_NAME\" == \"ovn-central-0\" ]; then\n    /usr/share/ovn/scripts/ovn-ctl run_nb_ovsdb \\\n        --db-nb-create-insecure-remote=yes \\\n        --db-nb-addr=$POD_IP \\\n        --db-nb-cluster-local-addr=$POD_IP \\\n        --db-nb-sock=/run/ovn/ovnnb_db.sock \\\n        --db-nb-pid=/run/ovn/ovnnb_db.pid \\\n        --db-nb-file=/var/lib/openvswitch/ovn-nb/ovnnb.db \\\n        --ovn-nb-logfile=/var/log/kolla/openvswitch/ovn-nb-db.log\nelse\n    /usr/share/ovn/scripts/ovn-ctl run_nb_ovsdb \\\n        --db-nb-create-insecure-remote=yes \\\n        --db-nb-addr=$POD_IP \\\n        --db-nb-cluster-local-addr=$POD_IP \\\n        --db-nb-cluster-remote-addr=ovn-central-0.ovn-central.default.svc.cluster.local \\\n        --db-nb-sock=/run/ovn/ovnnb_db.sock \\\n        --db-nb-pid=/run/ovn/ovnnb_db.pid \\\n        --db-nb-file=/var/lib/openvswitch/ovn-nb/ovnnb.db \\\n        --ovn-nb-logfile=/var/log/kolla/openvswitch/ovn-nb-db.log\nfi\n","start-ovn-northd.sh":"#!/usr/bin/env bash\n\nmkdir -p /run/ovn\nmkdir -p /var/log/kolla/openvswitch\n\n/usr/bin/ovn-northd -vconsole:emer -vsyslog:err -vfile:info \\\n    --ovnnb-db=tcp:ovn-central-0.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-1.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-2.central.default.svc.cluster.local:6641 \\\n    --ovnsb-db=tcp:ovn-central-0.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-1.ovn-central.default.svc.cluster.local:6641,tcp:ovn-central-2.central.default.svc.cluster.local:6641 \\\n    --log-file=/var/log/kolla/openvswitch/ovn-northd.log \\\n    --pidfile=/run/ovn/ovn-northd.pid \\\n    --unixctl=/run/ovn/ovn-northd.ctl\n","start-ovn-sb.sh":"#!/usr/bin/env bash\n\nmkdir -p /run/ovn\nmkdir -p /var/log/kolla/openvswitch\n\nif [ \"$POD_NAME\" == \"ovn-central-0\" ]; then\n    /usr/share/ovn/scripts/ovn-ctl run_sb_ovsdb \\\n        --db-sb-create-insecure-remote=yes \\\n        --db-sb-addr=$POD_IP \\\n        --db-sb-cluster-local-addr=$POD_IP  \\\n        --db-sb-sock=/run/ovn/ovnsb_db.sock \\\n        --db-sb-pid=/run/ovn/ovnsb_db.pid \\\n        --db-sb-file=/var/lib/openvswitch/ovn-sb/ovnsb.db \\\n        --ovn-sb-logfile=/var/log/kolla/openvswitch/ovn-sb-db.log\nelse\n    /usr/share/ovn/scripts/ovn-ctl run_sb_ovsdb \\\n        --db-sb-create-insecure-remote=yes \\\n        --db-sb-addr=$POD_IP \\\n        --db-sb-cluster-local-addr=$POD_IP \\\n        --db-sb-cluster-remote-addr=ovn-central-0.ovn-central.default.svc.cluster.local \\\n        --db-sb-sock=/run/ovn/ovnsb_db.sock \\\n        --db-sb-pid=/run/ovn/ovnsb_db.pid \\\n        --db-sb-file=/var/lib/openvswitch/ovn-sb/ovnsb.db \\\n        --ovn-sb-logfile=/var/log/kolla/openvswitch/ovn-sb-db.log\nfi\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"ovn-conf","namespace":"default"}}
+  creationTimestamp: "2022-02-28T13:05:55Z"
+  name: ovn-conf
+  namespace: default
+  resourceVersion: "2387145"
+  uid: 0deac714-c3ce-4357-a350-45ce5271ee2e

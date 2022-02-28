@@ -1,0 +1,137 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-ovn1
+  labels:
+    app: test-ovn1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-ovn1
+  template:
+    metadata:
+      labels:
+        app: test-ovn1
+    spec:
+      containers:
+        - name: ovn-nb-db
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-nb-db-server:master
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: ovn-nb-db.json
+            - name: ovn-nb-db
+              mountPath: "/var/lib/openvswitch/ovn-nb/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-nb-db"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+        - name: ovn-sb-db
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-sb-db-server:master
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: ovn-sb-db.json
+            - name: ovn-sb-db
+              mountPath: "/var/lib/openvswitch/ovn-sb/"
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-sb-db"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+        - name: ovn-northd
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-ovn-northd:master
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla/config_files/config.json"
+              subPath: ovn-northd.json
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "ovn-northd"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+      volumes:
+        - name: config
+          configMap:
+            name: ovn-conf
+        - name: ovn-nb-db
+          emptyDir: {}
+        - name: ovn-sb-db
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-ovn1
+spec:
+  selector:
+    app: test-ovn1
+  ports:
+    - name: "1"
+      protocol: TCP
+      port: 6641
+      targetPort: 6641
+    - name: "2"
+      protocol: TCP
+      port: 6642
+      targetPort: 6642
+    - name: "3"
+      protocol: TCP
+      port: 6643
+      targetPort: 6643
+    - name: "4"
+      protocol: TCP
+      port: 6644
+      targetPort: 6644
+  clusterIP: "None"
