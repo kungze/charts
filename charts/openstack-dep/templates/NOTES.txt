@@ -1,0 +1,10 @@
+CHART NAME: {{ .Chart.Name }}
+CHART VERSION: {{ .Chart.Version }}
+
+** 请耐心等待 chart 部署完成 **
+
+openstack 依赖 mariadb、rabbitmq、memcached 的连接信息
+
+    RABBITMQ_URL={{ include "rabbitmq.connInfo" . }}
+    MEMCACHE_URL={{ include "memcached.connInfo" . }}
+    MARIADB_URL={{ include "mariadb.connInfo" . }}
