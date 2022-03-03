@@ -1,0 +1,24 @@
+{{- define "metadata.annotations.job.cm_render" }}
+{{- end }}
+
+{{- define "cinder.render.podEnvVars" -}}
+{{- $envAll := index . 0 -}}
+env:
+  - name: CONF_FILE_NAME
+    value: cinder.conf
+  - name: CINDER_KEYSTONE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        key: cinder-keystone-password
+        name: {{ index $envAll.Values "openstack-dep" "passwordSecretName" }}
+  - name: AUTH_URL
+    valueFrom:
+      secretKeyRef:
+        key: KEYSTONE_INTERNAL_ENDPOINT
+        name: {{ index $envAll.Values "openstack-dep" "connInfoSecret"  }}
+{{- end -}}
+
+{{- $envAll := index . -}}
+{{- $podEnvVars := tuple . | include "cinder.render.podEnvVars" | toString | fromYaml }}
+{{- $cmRenderJob := dict "envAll" . "serviceName" "cinder" "dbUserPasswordName" "cinder-database-password" "podEnvVars" $podEnvVars.env "jobAnnotations" (include "metadata.annotations.job.cm_render" . | fromYaml) -}}
+{{ $cmRenderJob | include "common.manifests.job_cm_render" }}

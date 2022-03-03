@@ -1,0 +1,6 @@
+{{- define "metadata.annotations.job.db_init" }}
+{{- end }}
+
+{{- $envAll := index . -}}
+{{- $dbInitJob := dict "envAll" . "serviceName" "cinder" "dbUserPasswordName" "cinder-database-password" "jobAnnotations" (include "metadata.annotations.job.db_init" . | fromYaml) -}}
+{{ $dbInitJob | include "common.manifests.job_db_init" }}

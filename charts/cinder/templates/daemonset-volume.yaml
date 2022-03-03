@@ -1,0 +1,276 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cinder-volume
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: cinder-volume
+    spec:
+      initContainers:
+        - name: init
+          command:
+            - kubernetes-entrypoint
+          image: {{ template "entrypoint.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INTERFACE_NAME
+            value: eth0
+          - name: PATH
+            value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+          - name: DEPENDENCY_SERVICE
+            value: {{ .Release.Namespace }}:{{ include "common.utils.joinListWithComma" .Values.dependencies.cinder_volume.service }}
+        {{ if .Values.conf.lvm.create_loop_device }}
+        - name: loop
+          image: {{ template "cinder.loop.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          securityContext:
+            runAsUser: 0
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          command:
+              - /bin/sh
+              - -c
+              - |
+                dd if=/dev/zero of=/home/loog.img bs={{ .Values.conf.lvm.dd_lvm_bs }} count={{ .Values.conf.lvm.dd_lvm_count }}
+                losetup {{ .Values.conf.lvm.loop_name }} /home/loog.img
+                exit 0
+        {{- end }}
+      containers:
+        - name: cinder-volume
+          image: {{ template "cinder.volume.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          {{- if or (.Values.conf.lvm.enabled) (.Values.conf.ceph.enabled) }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                {{- if and (.Values.conf.lvm.enabled) (.Values.conf.ceph.enabled) }}
+                - /bin/sh
+                - -c
+                - >
+                  /tmp/lvm-create.sh;
+                  /tmp/ceph-toolbox.sh
+                {{- else if .Values.conf.ceph.enabled }}
+                - /tmp/ceph-toolbox.sh
+                {{- else if .Values.conf.lvm.enabled }}
+                - /tmp/lvm-create.sh
+                {{- end }}
+            {{- if .Values.conf.lvm.enabled }}
+            preStop:
+              exec:
+                command:
+                - /tmp/lvm-clean.sh
+            {{- end }}
+          {{- end }}
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+            capabilities:
+              add:
+              - SYS_ADMIN
+            privileged: true
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "cinder-volume"
+            - name: DM_DISABLE_UDEV
+              value: "1"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            {{- if .Values.conf.ceph.enabled }}
+            - name: ROOK_CEPH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.conf.ceph.ceph_secret_name }}
+                  key: {{ .Values.conf.ceph.ceph_username_fields }}
+            - name: ROOK_CEPH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.conf.ceph.ceph_secret_name }}
+                  key: {{ .Values.conf.ceph.ceph_secret_fields }}
+            {{- end }}
+          volumeMounts:
+            - mountPath: /tmp
+              name: pod-tmp
+            - mountPath: /dev
+              name: devices
+            - mountPath: /run
+              name: run-dir
+            - mountPath: /lib/modules
+              name: modules
+            - mountPath: /sys
+              name: sys
+            - mountPath: /var/log/kolla/cinder
+              name: kollalog
+            - mountPath: /var/lib/kolla/config_files/cinder.conf
+              name: cinder-etc
+              subPath: cinder.conf
+            - mountPath: /var/lib/kolla/config_files/config.json
+              name: cinder-etc
+              subPath: cinder-volume.json
+            {{- if .Values.conf.lvm.enabled }}
+            - mountPath: /tmp/lvm-create.sh
+              name: cinder-bin
+              subPath: lvm-create.sh
+            - mountPath: /tmp/lvm-clean.sh
+              name: cinder-bin
+              subPath: lvm-clean.sh
+            {{- end }}
+            {{- if eq .Values.conf.lvm.lvm_target_helper "tgtadm" }}
+            - mountPath: /var/lib/cinder/volumes
+              name: cinderlib
+            - name: etciscsi
+              mountPath: /etc/iscsi
+              mountPropagation: HostToContainer
+            - name: etcmultipath
+              mountPath: /etc/multipath
+              mountPropagation: Bidirectional
+            {{- end }}
+            {{- if .Values.conf.ceph.enabled }}
+            - mountPath: /etc/ceph
+              name: etc-ceph
+            - mountPath: /tmp/ceph-toolbox.sh
+              name: cinder-bin
+              subPath: ceph-toolbox.sh
+            - mountPath: /etc/rook
+              name: mon-endpoint-volume
+            {{- end }}
+        {{- if eq .Values.conf.lvm.lvm_target_helper "tgtadm" }}
+        - name: tgtd
+          image: {{ template "kolla.tgtd.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          ports:
+            - name: iscsi
+              containerPort: 3260
+              hostPort: 3260
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "tgtd"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+          volumeMounts:
+            - mountPath: /dev
+              name: devices
+            - mountPath: /var/lib/cinder/volumes
+              name: cinderlib
+            - mountPath: /run
+              name: run-dir
+            - mountPath: /lib/modules
+              name: modules
+            - mountPath: /sys
+              name: sys
+            - mountPath: /etc/iscsi
+              name: etciscsi
+              mountPropagation: HostToContainer
+            - mountPath: /var/lib/kolla/config_files/config.json
+              name: cinder-etc
+              subPath: tgtd.json
+      {{- end }}
+      serviceAccount: {{ .Values.serviceAccountName}}
+      serviceAccountName: {{ .Values.serviceAccountName}}
+      volumes:
+        - emptyDir: {}
+          name: pod-tmp
+        {{- if .Values.conf.ceph.enabled }}
+        - emptyDir: {}
+          name: etc-ceph
+        - name: mon-endpoint-volume
+          configMap:
+            name: {{ .Values.conf.ceph.ceph_cm_name }}
+            items:
+              - key: data
+                path: mon-endpoints
+        {{- end }}
+        - hostPath:
+            path: {{ .Values.conf.kolla_log_dir }}
+            type: DirectoryOrCreate
+          name: kollalog
+        - configMap:
+            defaultMode: 0644
+            name: cinder-etc
+          name: cinder-etc
+        - configMap:
+            defaultMode: 0755
+            name: cinder-bin
+          name: cinder-bin
+        - hostPath:
+            path: /dev
+            type: DirectoryOrCreate
+          name: devices
+        - hostPath:
+            path: /run
+            type: DirectoryOrCreate
+          name: run-dir
+        - hostPath:
+            path: /lib/modules
+            type: DirectoryOrCreate
+          name: modules
+        - name: sys
+          hostPath:
+            path: /sys
+            type: DirectoryOrCreate
+        {{- if eq .Values.conf.lvm.lvm_target_helper "tgtadm" }}
+        - emptyDir: {}
+          name: cinderlib
+        - name: etciscsi
+          hostPath:
+            path: /etc/iscsi
+        - name: etcmultipath
+          hostPath:
+            path: /etc/multipath
+        {{- end }}

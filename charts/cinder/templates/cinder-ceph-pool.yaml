@@ -1,0 +1,11 @@
+{{- if .Values.conf.ceph.enabled }}
+apiVersion: ceph.rook.io/v1
+kind: CephBlockPool
+metadata:
+  name: {{ .Values.conf.ceph.pool_name }}
+  namespace: {{ .Values.conf.ceph.rook_namespace }}
+spec:
+  failureDomain: {{ .Values.conf.ceph.poolFailureDomain }}
+  replicated:
+    size: {{ .Values.conf.ceph.size }}
+{{- end }}
