@@ -1,0 +1,144 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neutron-server-bootstrap
+spec:
+  template:
+    spec:
+      containers:
+        - name: neutron-server-bootstrap
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-kolla-toolbox:master
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: ANSIBLE_LIBRARY
+              value: /usr/share/ansible
+            - name: KOLLA_SERVICE_NAME
+              value: "kolla-toolbox"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1 
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: DB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-password
+                  key: mariadb-root-password
+            - name: DB_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-password
+                  key: neutron-database-password
+            - name: DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-conn-info
+                  key: MARIADB_URL
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/sudoers.d/kolla_ansible_sudoers"
+              subPath: kolla-toolbox-sudoer
+          command:
+            - "sh"
+            - "-c"
+            - >
+              echo $DB_ROOT_PASSWORD;
+              echo $DB_USER_PASSWORD;
+              login_host=$(echo $DB_ADDRESS|awk -F':' '{print $1}');
+              login_port=$(echo $DB_ADDRESS|awk -F':' '{print $NF}');
+              echo $login_host;
+              echo $login_port;
+              sudo /opt/ansible/bin/ansible localhost -m mysql_db -a "login_host=$login_host login_port=$login_port login_user=root login_password=$DB_ROOT_PASSWORD name=neutron";
+              sudo /opt/ansible/bin/ansible localhost -m mysql_user -a "login_host=$login_host login_port=$login_port login_user=root login_password=$DB_ROOT_PASSWORD name=neutron password=$DB_USER_PASSWORD host=% priv=neutron.*:ALL append_privs=yes";
+      volumes:
+        - name: config
+          configMap:
+            name: ovn-conf
+      restartPolicy: Never
+  backoffLimit: 4
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neutron-server-bootstrap-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: neutron-server-bootstrap-service
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-neutron-server:master
+          env:
+            - name: KOLLA_BOOTSTRAP
+              value: ""
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "bootstrap-neutron"
+            - name: PATH
+              value: "/var/lib/kolla/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1 
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: DB_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-password
+                  key: neutron-database-password
+            - name: DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-conn-info
+                  key: MARIADB_URL
+          command:
+            - "sh"
+            - "-c"
+            - >
+              sudo mkdir -p /var/lib/kolla/config_files;
+              sudo cp /var/lib/kolla-helm/config_files/config.json /var/lib/kolla/config_files/config.json;
+              sudo cp /var/lib/kolla-helm/config_files/neutron.conf /var/lib/kolla/config_files/neutron.conf;
+              sudo cp /var/lib/kolla-helm/config_files/ml2_conf.ini /var/lib/kolla/config_files/ml2_conf.ini;
+              sudo sed -i "s/database_password_placeholder/$DB_USER_PASSWORD/g" /var/lib/kolla/config_files/neutron.conf;
+              sudo sed -i "s/database_address_placeholder/$DB_ADDRESS/g" /var/lib/kolla/config_files/neutron.conf;
+              kolla_start;
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/config.json"
+              subPath: neutron-server.json
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/neutron.conf"
+              subPath: neutron.conf
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/ml2_conf.ini"
+              subPath: ml2_conf.ini
+            - name: config
+              mountPath: "/etc/sudoers.d/neutron_sudoers"
+              subPath: neutron-sudoer
+      volumes:
+        - name: config
+          configMap:
+            name: neutron-conf
+      restartPolicy: Never

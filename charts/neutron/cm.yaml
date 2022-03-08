@@ -1,0 +1,98 @@
+---
+# Source: neutron/templates/configmap-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neutron-conf
+data:
+  neutron.conf: |
+    # neutron.conf
+    [DEFAULT]
+    debug = false
+    
+    log_dir = /var/log/kolla/neutron
+    
+    # NOTE(elemoine): set use_stderr to False or the logs will also be sent to
+    # stderr and collected by Docker
+    use_stderr = False
+    bind_host = 0.0.0.0
+    
+    bind_port = 9696
+    
+    api_paste_config = /etc/neutron/api-paste.ini
+    
+    api_workers = 1
+    metadata_workers = 1
+    rpc_workers = 1
+    rpc_state_report_workers = 1
+    
+    # NOTE(SamYaple): We must specify this value here rather than the metadata conf
+    # because it is used by the l3 and dhcp agents. The reason the path has 'kolla'
+    # in it is because we are sharing this socket in a volume which is it's own dir
+    metadata_proxy_socket = /var/lib/neutron/kolla/metadata_proxy
+    
+    interface_driver = linuxbridge
+    
+    allow_overlapping_ips = true
+    
+    core_plugin = ml2
+    service_plugins = router
+    
+    transport_url = rpc_transport_url
+
+    auth_strategy = noauth
+    
+    [oslo_concurrency]
+    lock_path = /var/lib/neutron/tmp
+    
+    [agent]
+    root_helper = sudo neutron-rootwrap /etc/neutron/rootwrap.conf
+    
+    [database]
+    connection = mysql+pymysql://neutron:database_password_placeholder@database_address_placeholder/neutron
+    max_retries = -1
+    
+    
+    [privsep]
+    helper_command=sudo neutron-rootwrap /etc/neutron/rootwrap.conf privsep-helper
+     
+  ml2_conf.ini: |
+    # ml2_conf.ini
+    [ml2]
+    # Changing type_drivers after bootstrap can lead to database inconsistencies
+    type_drivers = flat,vlan
+    tenant_network_types = vlan
+    mechanism_drivers = linuxbridge
+    extension_drivers = port_security
+    
+    [ml2_type_vlan]
+    network_vlan_ranges = physnet1
+    
+    [ml2_type_flat]
+    flat_networks = *
+     
+  neutron-server.json: |
+    {
+        "command": "neutron-server --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini,
+        "config_files": [
+            {
+                "source": "/var/lib/kolla/config_files/neutron.conf",
+                "dest": "/etc/neutron/neutron.conf",
+                "owner": "neutron",
+                "perm": "0600"
+            },
+            {
+                "source": "/var/lib/kolla/config_files/ml2_conf.ini",
+                "dest": "/etc/neutron/plugins/ml2/ml2_conf.ini",
+                "owner": "neutron",
+                "perm": "0600"
+            }
+        ],
+        "permissions": [
+            {
+                "path": "/var/log/kolla/neutron",
+                "owner": "neutron:neutron",
+                "recurse": true
+            }
+        ]
+    }

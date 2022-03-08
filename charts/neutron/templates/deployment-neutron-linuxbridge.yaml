@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: neutron-linuxbridge-agent
+  labels:
+    kungze/app: neutron-linuxbridge-agent
+spec:
+  selector:
+    matchLabels:
+      kungze/app: neutron-linuxbridge-agent
+  template:
+    metadata:
+      labels:
+        kungze/app: neutron-linuxbridge-agent
+    spec:
+      hostNetwork: true
+      containers:
+        - name: neutron-linuxbridge-agent
+          securityContext:
+            privileged: true
+          image: registry.aliyuncs.com/openstack-helm/ubuntu-source-neutron-linuxbridge-agent:master
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: ANSIBLE_LIBRARY
+              value: /usr/share/ansible
+            - name: KOLLA_SERVICE_NAME
+              value: "neutron-server"
+            - name: PATH
+              value: "/var/lib/kolla/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1 
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: DB_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-password
+                  key: neutron-database-password
+            - name: DB_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-conn-info
+                  key: MARIADB_URL
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openstack-conn-info
+                  key: RABBITMQ_URL
+          command:
+            - "sh"
+            - "-c"
+            - > 
+              sudo mkdir -p /var/lib/kolla/config_files;
+              sudo cp /var/lib/kolla-helm/config_files/config.json /var/lib/kolla/config_files/config.json;
+              sudo cp /var/lib/kolla-helm/config_files/neutron.conf /var/lib/kolla/config_files/neutron.conf;
+              sudo cp /var/lib/kolla-helm/config_files/linuxbridge_agent.ini /var/lib/kolla/config_files/linuxbridge_agent.ini;
+              sudo sed -i "s/database_password_placeholder/$DB_USER_PASSWORD/g" /var/lib/kolla/config_files/neutron.conf;
+              sudo sed -i "s/database_address_placeholder/$DB_ADDRESS/g" /var/lib/kolla/config_files/neutron.conf;
+              sudo sed -i "s#rpc_transport_url#$RABBITMQ_URL#g" /var/lib/kolla/config_files/neutron.conf;
+              kolla_start
+          volumeMounts:
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/config.json"
+              subPath: neutron-linuxbridge-agent.json
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/neutron.conf"
+              subPath: neutron.conf
+            - name: config
+              mountPath: "/etc/sudoers.d/neutron_sudoers"
+              subPath: neutron-sudoer
+            - name: config
+              mountPath: "/var/lib/kolla-helm/config_files/linuxbridge_agent.ini"
+              subPath: linuxbridge_agent.ini
+      volumes:
+        - name: config
+          configMap:
+            name: neutron-conf
