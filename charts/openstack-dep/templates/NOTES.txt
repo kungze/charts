@@ -6,5 +6,6 @@ CHART VERSION: {{ .Chart.Version }}
 openstack 依赖 mariadb、rabbitmq、memcached 的连接信息
 
     RABBITMQ_URL={{ include "rabbitmq.connInfo" . }}
+    DATABASE_URL={{ include "database.connInfo" . }}
+    DATABASE_HOST={{ include "openstack.databaseHost" . }}
     MEMCACHE_URL={{ include "memcached.connInfo" . }}
-    MARIADB_URL={{ include "mariadb.connInfo" . }}

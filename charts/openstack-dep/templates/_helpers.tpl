@@ -50,18 +50,18 @@ Return the proper Keystone image name
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "openstack.mariadb.fullname" -}}
+{{- define "openstack.database.fullname" -}}
 {{- printf "%s-%s" .Release.Name "mariadb" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Return the Mariadb host
+Return the Database host
 */}}
-{{- define "openstack.mariadbHost" -}}
+{{- define "openstack.databaseHost" -}}
 {{- if .Values.mariadb.enabled }}
     {{- $releaseNamespace := .Release.Namespace }}
     {{- $clusterDomain := .Values.clusterDomainSuffix }}
-    {{- printf "%s.%s.svc.%s" (include "openstack.mariadb.fullname" .) $releaseNamespace $clusterDomain -}}
+    {{- printf "%s.%s.svc.%s" (include "openstack.database.fullname" .) $releaseNamespace $clusterDomain -}}
 {{- end -}}
 {{- end -}}
 
@@ -75,13 +75,13 @@ Return the MariaDB Port
 {{- end -}}
 
 {{/*
-Return the mariadb connInfo
+Return the database connInfo
 */}}
-{{- define "mariadb.connInfo" -}}
+{{- define "database.connInfo" -}}
 {{- if .Values.mariadb.enabled }}
-    {{- $mariadbHost := include "openstack.mariadbHost" . }}
-    {{- $mariadbPort := (include "openstack.databasePort" . | int) }}
-    {{- printf "%s:%d" $mariadbHost $mariadbPort }}
+    {{- $databaseHost := include "openstack.databaseHost" . }}
+    {{- $databasePort := (include "openstack.databasePort" . | int) }}
+    {{- printf "%s:%d" $databaseHost $databasePort }}
 {{- end }}
 {{- end -}}
 
