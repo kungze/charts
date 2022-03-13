@@ -49,12 +49,18 @@ jobs:
           cat $HOME/files.txt | tr " " "\n" | grep \/values\\.yaml > raw-inputs
           cat raw-inputs | sed 's/values.yaml/README.md/' >> raw-inputs
           cat raw-inputs | sed 's/charts/charts\/charts/' > prepared-inputs
+          echo `cat prepared-inputs |grep README | wc -l` >> $RUN_README
+        env:
+          RUN_README: 0
 
       - name: Execute readme-generator-for-helm
+        if: ${{ env.RUN_README == 1 }}
         run: readme-generator-for-helm/bin/index.js -v $(cat prepared-inputs | grep values) -r $(cat prepared-inputs | grep README) -s values.schema.json
 
       - name: Output generated README.md
+        if: ${{ env.RUN_README == 1 }}
         run: cat $(cat prepared-inputs | grep README)
 
       - name: Output gererated values.schema.json
+        if: ${{ env.RUN_README == 1 }}
         run: cat values.schema.json
