@@ -21,11 +21,13 @@ clusterDomainSuffix: cluster.local
 gen-password:
   secretName: openstack-password
 ## @param openstackEnv.rabbitmqUrl [t#rabbitmq url] 生成rabbitmq url信息
-## @param openstackEnv.mariadbUrl [t#mariadb url] 生成mariadb url信息
+## @param openstackEnv.databaseUrl [t#database url] 生成database url信息
+## @param openstackEnv.databaseHost [t#database host] 生成database host信息
 ## @param openstackEnv.memcacheUrl [t#mamcache url] 生成memcache url信息
 openstackEnv:
   rabbitmqUrl: ""
-  mariadbUrl: ""
+  databaseUrl: ""
+  databaseHost: ""
   memcacheUrl: ""
 
 ## @section Database Parameters
