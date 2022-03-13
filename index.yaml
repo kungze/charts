@@ -1,5 +1,20 @@
 apiVersion: v1
 entries:
+  common:
+  - annotations:
+      category: Openstack
+    apiVersion: v2
+    created: "2022-03-13T07:47:35.959057834Z"
+    description: Openstack kolla helm common library
+    digest: e9ea2261fe96e16e7e3da4e0a00bb1abd332f818a589fee03b9d257d3a68b6a5
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: common
+    type: library
+    urls:
+    - https://github.com/kungze/charts/releases/download/common-1.0.0/common-1.0.0.tgz
+    version: 1.0.0
   gen-password:
   - annotations:
       category: Openstack
@@ -221,4 +236,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/openstack-dep-1.0.0/openstack-dep-1.0.0.tgz
     version: 1.0.0
-generated: "2022-03-13T07:28:56.674324564Z"
+generated: "2022-03-13T07:47:35.95919491Z"
