@@ -18,6 +18,8 @@ secretName: openstack-password
 ## @param passwordEnvs.placement-database-password [t#Placement 数据库密码] Placement 数据库密码
 ## @param passwordEnvs.placement-keystone-password [t#Placement 用户密码] Placement 用户密码
 ## @param passwordEnvs.rabbitmq-password [t#Rabbitmq 用户密码] Rabbitmq 用户密码
+## @param passwordEnvs.rbd_secret_uuid [t#rbd secret uuid] rbd_secret_uuid is only used for nova
+## @param passwordEnvs.cinder_rbd_secret_uuid [t#cinder rbd secret uuid] cinder_rbd_secret_uuid is used for cinder
 passwordEnvs:
   mariadb-root-password: ""
   keystone-admin-password: ""
@@ -33,3 +35,5 @@ passwordEnvs:
   placement-database-password: ""
   placement-keystone-password: ""
   rabbitmq-password: ""
+  rbd_secret_uuid: ""
+  cinder_rbd_secret_uuid: ""
