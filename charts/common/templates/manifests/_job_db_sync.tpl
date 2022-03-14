@@ -1,6 +1,7 @@
 {{- define "common.manifests.job_db_sync" -}}
 {{- $envAll := index . "envAll" -}}
 {{- $serviceName := index . "serviceName" -}}
+{{- $jobAnnotations := index . "jobAnnotations" -}}
 {{- $podVolMounts := index . "podVolMounts" | default false -}}
 {{- $configMapBin := index . "configMapBin" | default (printf "%s-%s" $serviceName "bin" ) -}}
 {{- $configMapEtc := index . "configMapEtc" | default (printf "%s-%s" $serviceName "etc" ) -}}
@@ -10,6 +11,10 @@ kind: Job
 metadata:
   name: {{ printf "%s-%s" $serviceName "db-sync" | quote }}
   namespace: {{ $envAll.Release.Namespace | quote }}
+  annotations:
+{{- if $jobAnnotations }}
+{{ toYaml $jobAnnotations | indent 4 }}
+{{- end }}
 spec:
   template:
     spec:
@@ -17,6 +22,15 @@ spec:
         - name: {{ printf "%s-%s" $serviceName "db-sync" | quote }}
           image: {{ include "common.images.image" (dict "imageRoot" $envAll.Values.image.dbSync "global" $envAll.Values.global) | quote }}
           imagePullPolicy: {{ $envAll.Values.global.pullPolicy }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - kolla_start
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 1
           env:
             - name: KOLLA_CONFIG_STRATEGY
               value: "COPY_ALWAYS"
