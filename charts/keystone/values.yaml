@@ -14,7 +14,8 @@ global:
   pullPolicy: IfNotPresent
 
 ## @section Common parameters
-
+## @param helm3_hook enable helm3
+helm3_hook: true
 ## @param replicaCount Number of keystone replicas to deploy (requires ReadWriteMany PVC support)
 replicaCount: 1
 ## @param serviceAccountName ServiceAccount name
@@ -124,12 +125,22 @@ image:
     repository: airshipit/kubernetes-entrypoint
     tag: v1.0.0
 
+## @skip conf
+conf:
+  keystone:
+    provider: fernet
+    expiration: 86400
+    allow_expired_window: 172800
+
 ## @skip dependencies
 dependencies:
   keystone_api:
     jobs:
       - keystone-fernet-setup
       - keystone-bootstrap
+  cm_render:
+    jobs:
+      - keystone-update-openstack-conn-info
   db_init:
     jobs:
       - keystone-cm-render
@@ -163,16 +174,8 @@ jobs:
       success: 3
       failed: 1
 
-## @skip conf
-conf:
-  keystone:
-    provider: fernet
-    expiration: 86400
-    allow_expired_window: 172800
-
 ## @skip endpoints
 endpoints:
-  secret: keystone-endpoint
   cluster_domain_suffix: cluster.local
   auth:
     secretName: keystone-admin-secret
@@ -258,7 +261,6 @@ ingress:
 openstack-dep:
   enabled: true
   ## @param openstack-dep.connInfoSecret [t#ConnInfo secret name] openstack 依赖环境中生成服务URL得 secret 名称
-  ## @param openstack-dep.gen-password.secretName [t#Password secret name] openstack 依赖环境中自动生成服务相关密码得 secret 名称
+  ## @param openstack-dep.passwordSecretName [t#Password secret name] openstack 依赖环境中自动生成服务相关密码得 secret 名称
   connInfoSecret: openstack-conn-info
-  gen-password:
-    secretName: openstack-password
+  passwordSecretName: openstack-password

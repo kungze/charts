@@ -18,5 +18,7 @@ data:
 {{ tuple "bin/_bootstrap.sh.tpl" . | include "common.utils.template" |indent 4 }}
   fernet-manage.py: |
 {{ tuple "bin/_keystone_fernet_manage.py.tpl" . | include "common.utils.template" |indent 4 }}
-  keystone-cm-render.py: |
-{{ tuple "bin/_keystone_cm_render.py.tpl" . | include "common.utils.template" |indent 4 }}
+  configmap-render.py: |
+{{ include "common.scripts.configmap_render" . | indent 4 }}
+  update-openstack-conn-info.py: |
+{{- include "common.scripts.update_openstack_conn_info" . | indent 4  }}

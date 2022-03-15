@@ -1,0 +1,112 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.imagePullSecrets Global Docker registry secret names as an array
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+global:
+  imageRegistry: ""
+  ## E.g.
+  ## imagePullSecrets:
+  ##   - myRegistryKeySecretName
+  imagePullSecrets: []
+  storageClass: ""
+## @param connInfoSecret openstack dependency env generate conn info secret name
+connInfoSecret: openstack-conn-info
+## @param clusterDomainSuffix openstack dependency env generate conn info secret name
+clusterDomainSuffix: cluster.local
+## @param gen-password.secretName [t#自动生成密钥名称] 自动生成openstack密钥名称
+gen-password:
+  secretName: openstack-password
+## @param openstackEnv.rabbitmqUrl [t#rabbitmq url] 生成rabbitmq url信息
+## @param openstackEnv.databaseUrl [t#database url] 生成database url信息
+## @param openstackEnv.databaseHost [t#database host] 生成database host信息
+## @param openstackEnv.memcacheUrl [t#mamcache url] 生成memcache url信息
+openstackEnv:
+  rabbitmqUrl: ""
+  databaseUrl: ""
+  databaseHost: ""
+  memcacheUrl: ""
+
+## @section Database Parameters
+
+## MariaDB chart configuration
+mariadb:
+  ## @param mariadb.enabled [t#开启mariadb] Deploy a MariaDB server to satisfy the applications database requirements
+  enabled: true
+  ## @param mariadb.architecture [t#MariaDB架构] MariaDB architecture. Allowed values: `standalone` or `replication`
+  architecture: standalone
+  ## MariaDB Authentication parameters
+  ## @param mariadb.auth.existingSecret [t#MariaDB auth 配置] Use existing secret for password details
+  auth:
+    existingSecret: openstack-password
+  ## MariaDB Primary configuration
+  primary:
+    ## MariaDB Primary Persistence parameters
+    ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+    ## @param mariadb.primary.persistence.enabled Enable persistence on MariaDB using PVC(s)
+    ## @param mariadb.primary.persistence.storageClass Persistent Volume storage class
+    ## @param mariadb.primary.persistence.accessModes [m#array] Persistent Volume access modes
+    ## @param mariadb.primary.persistence.size Persistent Volume size
+    ##
+    persistence:
+      enabled: true
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 8Gi
+
+## @section RabbitMQ chart parameters
+## RabbitMQ chart configuration
+## https://github.com/bitnami/charts/blob/master/bitnami/rabbitmq/values.yaml
+rabbitmq:
+  ## @param rabbitmq.enabled [t#开启rabbitmq] Enable/disable RabbitMQ chart installation
+  enabled: true
+  ## @param rabbitmq.auth.username [t#RabbitMQ用户名] RabbitMQ username
+  ## @param rabbitmq.auth.existingPasswordSecret [t#RabbitMQ 密钥名称] Use existing secret for password details
+  auth:
+    username: openstack
+    existingPasswordSecret: openstack-password
+  ## @param rabbitmq.persistence.enabled Enable persistence on Rabbitmq using PVC(s)
+  ## @param rabbitmq.persistence.storageClass Persistent Volume storage class
+  ## @param rabbitmq.persistence.accessModes [m#array] Persistent Volume access modes
+  ## @param rabbitmq.persistence.size Persistent Volume size
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+
+## @section Memcached chart parameters
+
+## Memcached chart configuration
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/memcached/values.yaml
+memcached:
+  ## @param memcached.enabled [t#开启memcached] Deploy a Memcached server for caching database queries
+  enabled: true
+  ## Service parameters
+  service:
+    ## @param memcached.service.port Memcached service port
+    port: 11211
+
+## @section nginx-ingress-controller chart parameters
+
+## nginx-ingress-controller chart configuration
+## ref: https://github.com/bitnami/charts/blob/master/bitnami/nginx-ingress-controller/values.yaml
+nginx-ingress-controller:
+  ## @param nginx-ingress-controller.enabled [t#开启nginx-ingress-controller] Deploy a ingress controller server
+  enabled: true
+  ## @param nginx-ingress-controller.service.type controller service type
+  service:
+    type: ClusterIP
+  ## @param nginx-ingress-controller.podLabels.app for nginx-ingress-controller pod add labels to be compatible with SVC
+  podLabels:
+    app: ingress-api
+  ## @param nginx-ingress-controller.kind Install as DaemonSet
+  kind: DaemonSet
+  ## @param nginx-ingress-controller.daemonset.useHostPort If `kind` is `DaemonSet`, this will enable `hostPort` for `TCP/80` and `TCP/443`
+  daemonset:
+    useHostPort: true

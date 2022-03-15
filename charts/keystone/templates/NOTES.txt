@@ -1,6 +1,5 @@
 CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
-APP VERSION: {{ .Chart.AppVersion }}
 
 ** 请耐心等待 chart 部署完成 **
 
@@ -16,5 +15,5 @@ APP VERSION: {{ .Chart.AppVersion }}
     {{ include "common.utils.secret.getvalue" (dict "secret" $endpointsSecretName "field" "OS_PROJECT_NAME" "context" $) }}
     {{ include "common.utils.secret.getvalue" (dict "secret" $endpointsSecretName "field" "OS_REGION_NAME" "context" $) }}
     {{ include "common.utils.secret.getvalue" (dict "secret" $endpointsSecretName "field" "OS_IDENTITY_API_VERSION" "context" $) }}
-    export OS_PASSWORD=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.data.keystone-admin-password}" secrets {{ index .Values "openstack-dep" "gen-password" "secretName" }} | base64 --decode)
+    export OS_PASSWORD=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.data.keystone-admin-password}" secrets {{ index .Values "openstack-dep" "passwordSecretName" }} | base64 --decode)
     export OS_AUTH_URL={{ include "keystone.public.endpoints" . }}

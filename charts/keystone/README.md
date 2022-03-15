@@ -119,4 +119,4 @@ helm install keystone kungze/keystone
 | --------------------------------------- | -------------------- | ------------------------------------------------- | --------------------- |
 | `openstack-dep.enabled`                 | 安裝 openstack-dep     | 安装openstack依赖环境，包含mariadb;rabbitmq;memcached 等... | `true`                |
 | `openstack-dep.connInfoSecret`          | ConnInfo secret name | openstack 依赖环境中生成服务URL得 secret 名称                 | `openstack-conn-info` |
-| `openstack-dep.gen-password.secretName` | Password secret name | openstack 依赖环境中自动生成服务相关密码得 secret 名称              | `openstack-password`  |
+| `openstack-dep.passwordSecretName`      | Password secret name | openstack 依赖环境中自动生成服务相关密码得 secret 名称              | `openstack-password`  |

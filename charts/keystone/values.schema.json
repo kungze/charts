@@ -15,29 +15,24 @@
                 "connInfoSecret": {
                     "form": true,
                     "type": "string",
+                    "title": "ConnInfo secret name",
                     "hidden": {
                         "value": false,
                         "path": "openstack-dep/enabled"
                     },
                     "description": "openstack 依赖环境中生成服务URL得 secret 名称",
-                    "title": "ConnInfo secret name",
                     "default": "openstack-conn-info"
                 },
-                "gen-password": {
-                    "type": "object",
-                    "properties": {
-                        "secretName": {
-                            "form": true,
-                            "type": "string",
-                            "hidden": {
-                                "value": false,
-                                "path": "openstack-dep/enabled"
-                            },
-                            "description": "openstack 依赖环境中自动生成服务相关密码得 secret 名称",
-                            "title": "Password secret name",
-                            "default": "openstack-password"
-                        }
-                    }
+                "passwordSecretName": {
+                    "form": true,
+                    "type": "string",
+                    "title": "Password secret name",
+                    "hidden": {
+                        "value": false,
+                        "path": "openstack-dep/enabled"
+                    },
+                    "description": "openstack 依赖环境中自动生成服务相关密码得 secret 名称",
+                    "default": "openstack-password"
                 }
             }
         }

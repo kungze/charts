@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+data:
+  cinderConfig: |-
+    [DEFAULT]
+    auth_strategy = {{ .Values.conf.cinder.auth_strategy }}
+    [keystone_authtoken]
+    auth_type = {{ .Values.conf.cinder.auth_type }}
+    [database]
+    connection = mysql+pymysql://{{ .Values.mariadb.auth.username }}:{{ .Values.mariadb.auth.password }}@{{ include "cinder.databaseHost" . }}:{{ include "cinder.databasePort" . }}/{{ .Values.mariadb.auth.database }}
+  sync-db.sh: |-
+    #!/bin/bash
+    set -ex
+    exec cinder-manage db sync
+  cinder-api.sh: |-
+    #!/bin/bash
+    set -ex
+    COMMAND="${@:-start}"
+    function start () {
+      exec cinder-api \
+            --config-file /etc/cinder/cinder.conf
+    }
+    function stop () {
+      kill -TERM 1
+    }
+    $COMMAND

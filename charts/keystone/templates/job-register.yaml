@@ -16,17 +16,17 @@ env:
     valueFrom:
       secretKeyRef:
         key: KEYSTONE_ADMIN_ENDPOINT
-        name: {{ $envAll.Values.endpoints.secret }}
+        name: {{ index $envAll.Values "openstack-dep" "connInfoSecret"  }}
   - name: INTERNAL_URL
     valueFrom:
       secretKeyRef:
         key: KEYSTONE_INTERNAL_ENDPOINT
-        name: {{ $envAll.Values.endpoints.secret }}
+        name: {{ index $envAll.Values "openstack-dep" "connInfoSecret"  }}
   - name: PUBLIC_URL
     valueFrom:
       secretKeyRef:
         key: KEYSTONE_PUBLIC_ENDPOINT
-        name: {{ $envAll.Values.endpoints.secret }}
+        name: {{ index $envAll.Values "openstack-dep" "connInfoSecret"  }}
 {{- end }}
 
 {{- define "keystone.register.podVolMounts" -}}

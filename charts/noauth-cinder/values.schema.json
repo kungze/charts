@@ -1,0 +1,110 @@
+{
+    "type": "object",
+    "properties": {
+        "image": {
+            "type": "object",
+            "title": "Cinder API Image Config",
+            "form": true,
+            "description": "cinder image config parameter",
+            "properties": {
+                "registry": {
+                    "type": "string",
+                    "title": "Cinder API Image Registry",
+                    "form": true,
+                    "description": "Cinder image registry",
+                    "default": "docker.io"
+                },
+                "repository": {
+                    "type": "string",
+                    "title": "Cinder API Image Repository",
+                    "form": true,
+                    "description": "Cinder image repository",
+                    "default": "douyali/cinder-api"
+                },
+                "tag": {
+                    "type": "string",
+                    "title": "Cinder API Image Tag",
+                    "form": true,
+                    "description": "Cinder image tag (immutable tags are recommended)",
+                    "default": "latest"
+                }
+            }
+        },
+        "replicaCount": {
+            "type": "number",
+            "title": "Cinder API Replica Number",
+            "form": true,
+            "description": "Number of Cinder replicas (requires ReadWriteMany PVC support)",
+            "default": 1
+        },
+        "conf": {
+            "type": "object",
+            "title": "Cinder Config File",
+            "form": true,
+            "properties": {
+                "cinder": {
+                    "type": "object",
+                    "properties": {
+                        "auth_strategy": {
+                            "type": "string",
+                            "title": "Auth Strategy",
+                            "form": true,
+                            "description": "Auth strategy for cinder api",
+                            "default": "noauth"
+                        },
+                        "auth_type": {
+                            "type": "string",
+                            "title": "Auth Type",
+                            "form": true,
+                            "description": "Auth type for cinder api",
+                            "default": "none"
+                        }
+                    }
+                }
+            }
+        },
+        "mariadb": {
+            "type": "object",
+            "title": "MariaDB Details",
+            "form": true,
+            "properties": {
+                "enabled": {
+                "type": "boolean",
+                "title": "Use a new MariaDB database hosted in the cluster",
+                "form": true,
+                "description": "Whether to deploy a mariadb server to satisfy the applications database requirements. To use an external database switch this off and configure the external database details"
+                },
+                "primary": {
+                    "type": "object",
+                    "properties": {
+                        "persistence": {
+                            "type": "object",
+                            "properties": {
+                                "size": {
+                                    "type": "string",
+                                    "title": "Volume Size",
+                                    "form": true,
+                                    "hidden": {
+                                        "value": false,
+                                        "path": "mariadb/enabled"
+                                    },
+                                    "render": "slider",
+                                    "sliderMin": 1,
+                                    "sliderMax": 100,
+                                    "sliderUnit": "Gi"
+                                },
+                                "storageClass": {
+                                    "type": "string",
+                                    "title": "Mariadb StorageClass Name",
+                                    "form": true,
+                                    "description": "mariadb service storage class name",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

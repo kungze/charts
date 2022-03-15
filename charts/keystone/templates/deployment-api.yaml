@@ -83,7 +83,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: keystone-database-password
-                  name: {{ index .Values "openstack-dep" "gen-password" "secretName" }}
+                  name: {{ index .Values "openstack-dep" "passwordSecretName" }}
           ports:
             - name: {{ .Values.service.publicService.portname }}
               containerPort: {{ .Values.service.publicService.port }}
