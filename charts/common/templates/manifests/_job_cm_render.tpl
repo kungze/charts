@@ -1,6 +1,7 @@
 {{- define "common.manifests.job_cm_render" -}}
 {{- $envAll := index . "envAll" -}}
 {{- $serviceName := index . "serviceName" -}}
+{{- $jobAnnotations := index . "jobAnnotations" -}}
 {{- $dbUserPasswordName := index . "dbUserPasswordName" -}}
 {{- $podEnvVars := index . "podEnvVars" | default false -}}
 {{- $configMapBin := index . "configMapBin" | default (printf "%s-%s" $serviceName "bin" ) -}}
@@ -11,6 +12,10 @@ kind: Job
 metadata:
   name: {{ printf "%s-%s" $serviceName "cm-render" | quote }}
   namespace: {{ $envAll.Release.Namespace | quote }}
+  annotations:
+{{- if $jobAnnotations }}
+{{ toYaml $jobAnnotations | indent 4 }}
+{{- end }}
 spec:
   template:
     spec:
@@ -21,16 +26,12 @@ spec:
           command:
             - /bin/sh
             - -c
-            - python3 {{ printf "%s/%s-%s" "/tmp" $serviceName "cm-render.py" | quote }}
+            - python3 /tmp/configmap-render.py
           env:
             - name: KUBERNETES_NAMESPACE
               value: {{ $envAll.Release.Namespace }}
             - name: CONFIG_MAP_NAME
               value: {{ printf "%s-%s" $serviceName "etc" | quote }}
-            - name: DB_NAME
-              value: {{ $envAll.Values.database.database | quote }}
-            - name: DB_USERNAME
-              value: {{ $envAll.Values.database.username | quote }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -57,12 +58,13 @@ spec:
           volumeMounts:
             - mountPath: /tmp
               name: pod-tmp
-            - mountPath: {{ printf "%s/%s-%s" "/tmp" $serviceName "cm-render.py" | quote }}
+            - mountPath: /tmp/configmap-render.py
               name: {{ $configMapBin | quote }}
-              subPath: {{ printf "%s-%s" $serviceName "cm-render.py" | quote }}
+              subPath: configmap-render.py
             - mountPath: /etc/sudoers.d/kolla_ansible_sudoers
               name: {{ $configMapEtc | quote }}
               subPath: kolla-toolbox-sudoer
+      {{- if index  $envAll.Values "openstack-dep" "enabled" }}
       initContainers:
         - name: init
           image: {{ include "common.images.image" (dict "imageRoot" $envAll.Values.image.entrypoint "global" $envAll.Values.global) | quote }}
@@ -84,6 +86,7 @@ spec:
               value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
             - name: DEPENDENCY_SERVICE
               value: {{ $envAll.Release.Namespace }}:{{ $envAll.Release.Name }}-mariadb
+      {{- end }}
       restartPolicy: OnFailure
       serviceAccount: {{ $envAll.Values.serviceAccountName}}
       serviceAccountName: {{ $envAll.Values.serviceAccountName}}

@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'charts/**/values.yaml'
+env:
+  RUN_README: 1
 
 jobs:
   generate-chart-readme:
@@ -50,8 +52,6 @@ jobs:
           cat raw-inputs | sed 's/values.yaml/README.md/' >> raw-inputs
           cat raw-inputs | sed 's/charts/charts\/charts/' > prepared-inputs
           echo `cat prepared-inputs |grep README | wc -l` >> $RUN_README
-        env:
-          RUN_README: 0
 
       - name: Execute readme-generator-for-helm
         if: ${{ env.RUN_README == 1 }}
