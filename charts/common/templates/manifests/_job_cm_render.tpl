@@ -64,7 +64,6 @@ spec:
             - mountPath: /etc/sudoers.d/kolla_ansible_sudoers
               name: {{ $configMapEtc | quote }}
               subPath: kolla-toolbox-sudoer
-      {{- if index  $envAll.Values "openstack-dep" "enabled" }}
       initContainers:
         - name: init
           image: {{ include "common.images.image" (dict "imageRoot" $envAll.Values.image.entrypoint "global" $envAll.Values.global) | quote }}
@@ -84,9 +83,12 @@ spec:
                   fieldPath: metadata.namespace
             - name: PATH
               value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+            - name: DEPENDENCY_JOBS
+              value: {{ include "common.utils.joinListWithComma" $envAll.Values.dependencies.cm_render.jobs }}
+            {{- if index  $envAll.Values "openstack-dep" "enabled" }}
             - name: DEPENDENCY_SERVICE
               value: {{ $envAll.Release.Namespace }}:{{ $envAll.Release.Name }}-mariadb
-      {{- end }}
+            {{- end }}
       restartPolicy: OnFailure
       serviceAccount: {{ $envAll.Values.serviceAccountName}}
       serviceAccountName: {{ $envAll.Values.serviceAccountName}}
