@@ -36,7 +36,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: {{ $dbUserPasswordName | quote }}
-                  name: {{ index $envAll.Values "openstack-dep" "gen-password" "secretName" }}
+                  name: {{ index $envAll.Values "openstack-dep" "passwordSecretName" }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
