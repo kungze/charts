@@ -1,224 +1,137 @@
-{{/*
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/}}
-
-{{- define "apiProbeTemplate" }}
-httpGet:
-  scheme: {{ tuple "identity" "internal" "api" . | include "helm-toolkit.endpoints.keystone_endpoint_scheme_lookup" | upper }}
-  path: /v3/
-  port: {{ tuple "identity" "internal" "api" . | include "helm-toolkit.endpoints.endpoint_port_lookup" }}
-{{- end }}
-
-{{- if .Values.manifests.deployment_api }}
-{{- $envAll := . }}
-
-{{- $mounts_keystone_api := .Values.pod.mounts.keystone_api.keystone_api }}
-{{- $mounts_keystone_api_init := .Values.pod.mounts.keystone_api.init_container }}
-
-{{- $serviceAccountName := "keystone-api" }}
-{{ tuple $envAll "api" $serviceAccountName | include "helm-toolkit.snippets.kubernetes_pod_rbac_serviceaccount" }}
----
-apiVersion: apps/v1
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: keystone-api
-  annotations:
-    {{ tuple $envAll | include "helm-toolkit.snippets.release_uuid" }}
-  labels:
-{{ tuple $envAll "keystone" "api" | include "helm-toolkit.snippets.kubernetes_metadata_labels" | indent 4 }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.pod.replicas.api }}
   selector:
-    matchLabels:
-{{ tuple $envAll "keystone" "api" | include "helm-toolkit.snippets.kubernetes_metadata_labels" | indent 6 }}
-{{ tuple $envAll | include "helm-toolkit.snippets.kubernetes_upgrades_deployment" | indent 2 }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  replicas: {{ .Values.replicaCount }}
   template:
     metadata:
-      labels:
-{{ tuple $envAll "keystone" "api" | include "helm-toolkit.snippets.kubernetes_metadata_labels" | indent 8 }}
-      annotations:
-{{ tuple $envAll | include "helm-toolkit.snippets.release_uuid" | indent 8 }}
-        configmap-bin-hash: {{ tuple "configmap-bin.yaml" . | include "helm-toolkit.utils.hash" }}
-        configmap-etc-hash: {{ tuple "configmap-etc.yaml" . | include "helm-toolkit.utils.hash" }}
-{{ dict "envAll" $envAll "podName" "keystone-api" "containerNames" (list "keystone-api") | include "helm-toolkit.snippets.kubernetes_mandatory_access_control_annotation" | indent 8 }}
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: keystone
     spec:
-{{ dict "envAll" $envAll "application" "keystone" | include "helm-toolkit.snippets.kubernetes_pod_security_context" | indent 6 }}
-      serviceAccountName: {{ $serviceAccountName }}
-      affinity:
-{{ tuple $envAll "keystone" "api" | include "helm-toolkit.snippets.kubernetes_pod_anti_affinity" | indent 8 }}
-      nodeSelector:
-        {{ .Values.labels.api.node_selector_key }}: {{ .Values.labels.api.node_selector_value }}
-      terminationGracePeriodSeconds: {{ .Values.pod.lifecycle.termination_grace_period.api.timeout | default "30" }}
       initContainers:
-{{ tuple $envAll "api" $mounts_keystone_api_init | include "helm-toolkit.snippets.kubernetes_entrypoint_init_container" | indent 8 }}
-        - name: link-keys
-          image: {{ .Values.images.tags.keystone_api }}
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/sh
-            - -c
-          args:
-            - set -xe;
-              find /etc/keystone/mounted-keys -type l -exec ln -sfn {} {{ .Values.conf.keystone.fernet_tokens.key_repository }} \; ;
-              chmod o-wrx {{ .Values.conf.keystone.fernet_tokens.key_repository }} ;
-          securityContext:
-            runAsUser: 0
-          volumeMounts:
-            - name: keystone-fernet-keys
-              mountPath: /etc/keystone/mounted-keys
-            - name: post-keystone-fernet-keys
-              mountPath: {{ .Values.conf.keystone.fernet_tokens.key_repository }}
+        - command:
+          - kubernetes-entrypoint
+          name: init
+          image: {{ template "entrypoint.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INTERFACE_NAME
+            value: eth0
+          - name: PATH
+            value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+          - name: DEPENDENCY_JOBS
+            value: {{ include "common.utils.joinListWithComma" .Values.dependencies.keystone_api.jobs }}
       containers:
         - name: keystone-api
-{{ tuple $envAll "keystone_api" | include "helm-toolkit.snippets.image" | indent 10 }}
-{{ tuple $envAll $envAll.Values.pod.resources.api | include "helm-toolkit.snippets.kubernetes_resources" | indent 10 }}
-{{ dict "envAll" $envAll "application" "keystone" "container" "keystone_api" | include "helm-toolkit.snippets.kubernetes_container_security_context" | indent 10 }}
-          command:
-            - /tmp/keystone-api.sh
-            - start
-          lifecycle:
-            preStop:
-              exec:
-                command:
-                  - /tmp/keystone-api.sh
-                  - stop
+          image: {{ template "keystone.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- else if .Values.customLivenessProbe }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customLivenessProbe "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- else if .Values.customReadinessProbe }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.customReadinessProbe "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          # yamllint disable rule:indentation
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          # yamllint enable rule:indentation
+          {{- end }}
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "keystone"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: KEYSTONE_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: keystone-database-password
+                  name: {{ index .Values "openstack-dep" "passwordSecretName" }}
           ports:
-            - name: ks-pub
-              containerPort: {{ tuple "identity" "internal" "api" . | include "helm-toolkit.endpoints.endpoint_port_lookup" }}
-{{ dict "envAll" $envAll "component" "api" "container" "api" "type" "readiness" "probeTemplate" (include "apiProbeTemplate" $envAll | fromYaml) | include "helm-toolkit.snippets.kubernetes_probe" | trim | indent 10 }}
-{{ dict "envAll" $envAll "component" "api" "container" "api" "type" "liveness" "probeTemplate" (include "apiProbeTemplate" $envAll | fromYaml) | include "helm-toolkit.snippets.kubernetes_probe" | trim | indent 10 }}
+            - name: {{ .Values.service.publicService.portname }}
+              containerPort: {{ .Values.service.publicService.port }}
+              protocol: TCP
           volumeMounts:
-            - name: pod-tmp
-              mountPath: /tmp
-            - name: etckeystone
-              mountPath: /etc/keystone
-            - name: logs-apache
-              mountPath: /var/log/apache2
-            - name: run-apache
-              mountPath: /var/run/apache2
-            - name: wsgi-keystone
-              mountPath: /var/www/cgi-bin/keystone
-            - name: keystone-etc
-              mountPath: /etc/keystone/keystone.conf
-              subPath: keystone.conf
-              readOnly: true
-            - name: keystone-etc
-              mountPath: /etc/apache2/ports.conf
-              subPath: ports.conf
-              readOnly: true
-            {{- if .Values.conf.keystone.DEFAULT.log_config_append }}
-            - name: keystone-etc
-              mountPath: {{ .Values.conf.keystone.DEFAULT.log_config_append }}
-              subPath: {{ base .Values.conf.keystone.DEFAULT.log_config_append }}
-              readOnly: true
-            {{- end }}
-            - name: keystone-etc
-              mountPath: /etc/keystone/policy.yaml
-              subPath: policy.yaml
-              readOnly: true
-            - name: keystone-etc
-              mountPath: /etc/keystone/access_rules.json
-              subPath: access_rules.json
-              readOnly: true
-            - name: keystone-etc
-              mountPath: /etc/keystone/sso_callback_template.html
-              subPath: sso_callback_template.html
-              readOnly: true
-            - name: keystone-etc
-              mountPath: {{ .Values.conf.software.apache2.conf_dir }}/wsgi-keystone.conf
-              subPath: wsgi-keystone.conf
-              readOnly: true
-            - name: keystone-etc
-              mountPath: {{ .Values.conf.software.apache2.mods_dir }}/mpm_event.conf
-              subPath: mpm_event.conf
-              readOnly: true
-{{- if .Values.conf.security }}
-            - name: keystone-etc
-              mountPath: {{ .Values.conf.software.apache2.conf_dir }}/security.conf
-              subPath: security.conf
-              readOnly: true
-{{- end }}
-            - name: keystone-bin
-              mountPath: /tmp/keystone-api.sh
-              subPath: keystone-api.sh
-              readOnly: true
-{{- if .Values.endpoints.ldap.auth.client.tls.ca }}
-            - name: keystone-ldap-tls
-              mountPath: /etc/keystone/ldap/tls.ca
-              subPath: tls.ca
-              readOnly: true
-{{- end }}
-{{- if eq .Values.conf.keystone.token.provider "fernet" }}
-            - name: keystone-fernet-keys
-              mountPath: /etc/keystone/mounted-keys
-            - name: post-keystone-fernet-keys
-              mountPath: {{ .Values.conf.keystone.fernet_tokens.key_repository }}
-{{- end }}
-            - name: keystone-credential-keys
-              mountPath: {{ .Values.conf.keystone.credential.key_repository }}
-{{- if and $envAll.Values.manifests.certificates $envAll.Values.endpoints.oslo_db.auth.admin.secret.tls.internal }}
-{{- dict "enabled" $envAll.Values.manifests.certificates "name" $envAll.Values.endpoints.oslo_db.auth.admin.secret.tls.internal "path" "/etc/mysql/certs" | include "helm-toolkit.snippets.tls_volume_mount" | indent 12 }}
-{{- end }}
-{{- if and $envAll.Values.manifests.certificates .Values.secrets.tls.identity.api.internal }}
-{{- dict "enabled" .Values.manifests.certificates "name" .Values.secrets.tls.identity.api.internal "path" "/etc/keystone/certs" | include "helm-toolkit.snippets.tls_volume_mount" | indent 12 }}
-{{- end  }}
-{{- if and $envAll.Values.manifests.certificates  $envAll.Values.endpoints.oslo_messaging.auth.admin.secret.tls.internal }}
-{{- dict "enabled" $envAll.Values.manifests.certificates "name" $envAll.Values.endpoints.oslo_messaging.auth.admin.secret.tls.internal "path" "/etc/rabbitmq/certs" | include "helm-toolkit.snippets.tls_volume_mount" | indent 12 }}
-{{- end }}
-{{ if $mounts_keystone_api.volumeMounts }}{{ toYaml $mounts_keystone_api.volumeMounts | indent 12 }}{{ end }}
-      volumes:
-        - name: pod-tmp
-          emptyDir: {}
-        - name: etckeystone
-          emptyDir: {}
-        - name: wsgi-keystone
-          emptyDir: {}
-        - name: logs-apache
-          emptyDir: {}
-        - name: run-apache
-          emptyDir: {}
-        - name: keystone-etc
-          secret:
-            secretName: keystone-etc
-            defaultMode: 0440
-        - name: keystone-bin
-          configMap:
+          - mountPath: /tmp
+            name: pod-tmp
+          - mountPath: /var/lib/kolla/config_files/
+            name: configdir
+          - mountPath: /var/log/kolla/keystone
+            name: kollalog
+          - mountPath: /var/lib/kolla/config_files/keystone-startup.sh
             name: keystone-bin
-            defaultMode: 0555
-{{- if .Values.endpoints.ldap.auth.client.tls.ca }}
-        - name: keystone-ldap-tls
-          secret:
-            secretName: keystone-ldap-tls
-{{- end }}
-{{- if eq .Values.conf.keystone.token.provider "fernet" }}
-        - name: post-keystone-fernet-keys
-          emptyDir: {}
-        - name: keystone-fernet-keys
-          secret:
-            secretName: keystone-fernet-keys
-            defaultMode: 0440
-{{- end }}
-        - name: keystone-credential-keys
-          secret:
-            secretName: keystone-credential-keys
-{{- if and $envAll.Values.manifests.certificates $envAll.Values.endpoints.oslo_db.auth.admin.secret.tls.internal }}
-{{- dict "enabled" $envAll.Values.manifests.certificates "name" $envAll.Values.endpoints.oslo_db.auth.admin.secret.tls.internal | include "helm-toolkit.snippets.tls_volume" | indent 8 }}
-{{- end }}
-{{- if and $envAll.Values.manifests.certificates .Values.secrets.tls.identity.api.internal }}
-{{- dict "enabled" .Values.manifests.certificates "name" .Values.secrets.tls.identity.api.internal | include "helm-toolkit.snippets.tls_volume" | indent 8 }}
-{{- end }}
-{{- if and $envAll.Values.manifests.certificates  $envAll.Values.endpoints.oslo_messaging.auth.admin.secret.tls.internal }}
-{{- dict "enabled" $envAll.Values.manifests.certificates "name" $envAll.Values.endpoints.oslo_messaging.auth.admin.secret.tls.internal | include "helm-toolkit.snippets.tls_volume" | indent 8 }}
-{{- end }}
-{{ if $mounts_keystone_api.volumes }}{{ toYaml $mounts_keystone_api.volumes | indent 8 }}{{ end }}
-{{- end }}
+            subPath: keystone-startup.sh
+          - mountPath: /var/lib/kolla/config_files/keystone.conf
+            name: keystone-etc
+            subPath: keystone.conf
+          - mountPath: /var/lib/kolla/config_files/config.json
+            name: keystone-etc
+            subPath: keystone-api.json
+          - mountPath: /var/lib/kolla/config_files/wsgi-keystone.conf
+            name: keystone-etc
+            subPath: wsgi-keystone.conf
+          - mountPath: /etc/keystone/fernet-keys/
+            name: keystone-fernet-keys
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccount: {{ .Values.serviceAccountName}}
+      serviceAccountName: {{ .Values.serviceAccountName}}
+      volumes:
+      - emptyDir: {}
+        name: pod-tmp
+      - emptyDir: {}
+        name: configdir
+      - hostPath:
+          path: /var/log/kolla/keystone
+          type: DirectoryOrCreate
+        name: kollalog
+      - configMap:
+          defaultMode: 420
+          name: keystone-etc
+        name: keystone-etc
+      - configMap:
+          defaultMode: 493
+          name: keystone-bin
+        name: keystone-bin
+      - name: keystone-fernet-keys
+        secret:
+          defaultMode: 420
+          secretName: keystone-fernet-keys

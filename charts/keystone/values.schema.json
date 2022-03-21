@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties": {
+        "openstack-dep": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "form": true,
+                    "type": "boolean",
+                    "description": "安装openstack依赖环境,包含mariadb;rabbitmq;memcached 等...",
+                    "title": "安裝 openstack-dep",
+                    "default": true
+                },
+                "connInfoSecret": {
+                    "form": true,
+                    "type": "string",
+                    "title": "ConnInfo secret name",
+                    "hidden": {
+                        "value": false,
+                        "path": "openstack-dep/enabled"
+                    },
+                    "description": "openstack 依赖环境中生成服务URL得 secret 名称",
+                    "default": "openstack-conn-info"
+                },
+                "passwordSecretName": {
+                    "form": true,
+                    "type": "string",
+                    "title": "Password secret name",
+                    "hidden": {
+                        "value": false,
+                        "path": "openstack-dep/enabled"
+                    },
+                    "description": "openstack 依赖环境中自动生成服务相关密码得 secret 名称",
+                    "default": "openstack-password"
+                }
+            }
+        }
+    }
+}
