@@ -62,12 +62,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: mariadb-root-password
-                  name: {{ index $envAll.Values "openstack-dep" "passwordSecretName" | quote }}
+                  name: {{ index $envAll.Values "openstack-dep" "gen-password" "secretName" | quote }}
             - name: DB_USER_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: {{ $dbUserPasswordName | quote }}
-                  name: {{ index $envAll.Values "openstack-dep" "passwordSecretName" | quote }}
+                  name: {{ index $envAll.Values "openstack-dep" "gen-password" "secretName" | quote }}
           volumeMounts:
             - mountPath: /tmp
               name: pod-tmp
