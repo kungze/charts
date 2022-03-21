@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.ceph.configMapName }}
+  namespace: {{ .Release.Namespace }}
+data:
+  ceph.conf: |
+{{ tpl .Values.ceph.data.cephConfig . | indent 4 }}

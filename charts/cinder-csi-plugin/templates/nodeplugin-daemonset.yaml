@@ -1,0 +1,176 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: {{ include "cinder-csi.name" . }}-nodeplugin
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cinder-csi.nodeplugin.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cinder-csi.nodeplugin.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cinder-csi.nodeplugin.labels" . | nindent 8 }}
+    spec:
+      serviceAccount: csi-cinder-node-sa
+      hostNetwork: true
+      {{- if empty .Values.cloud.cinderListenAddr }}
+      initContainers:
+        - command:
+          - kubernetes-entrypoint
+          name: init
+          image: {{ .Values.csi.kubernetesEntrypoint.image.repository }}:{{ .Values.csi.kubernetesEntrypoint.image.tag }}
+          imagePullPolicy: {{ .Values.csi.kubernetesEntrypoint.image.pullPolicy }}
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: PATH
+            value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+          - name: DEPENDENCY_SERVICE
+            value: {{ .Release.Namespace }}:{{ .Release.Name }}-noauth-cinder
+      {{- end }}
+      containers:
+        - name: node-driver-registrar
+          image: "{{ .Values.csi.nodeDriverRegistrar.image.repository }}:{{ .Values.csi.nodeDriverRegistrar.image.tag }}"
+          imagePullPolicy: {{ .Values.csi.nodeDriverRegistrar.image.pullPolicy }}
+          args:
+            - "-v={{ .Values.logVerbosityLevel }}"
+            - "--csi-address=$(ADDRESS)"
+            - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: {{ .Values.csi.plugin.nodePlugin.kubeletDir }}/plugins/cinder.csi.openstack.org/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+          resources: {{ toYaml .Values.csi.nodeDriverRegistrar.resources | nindent 12 }}
+        - name: liveness-probe
+          image: "{{ .Values.csi.livenessprobe.image.repository }}:{{ .Values.csi.livenessprobe.image.tag }}"
+          imagePullPolicy: {{ .Values.csi.livenessprobe.image.pullPolicy }}
+          args:
+            - "-v={{ .Values.logVerbosityLevel }}"
+            - --csi-address=/csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources: {{ toYaml .Values.csi.livenessprobe.resources | nindent 12 }}
+        - name: cinder-csi-plugin
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: "{{ .Values.csi.plugin.image.repository }}:{{ .Values.csi.plugin.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.csi.plugin.image.pullPolicy }}
+          args:
+            - /bin/cinder-csi-plugin
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--cloud-config=$(CLOUD_CONFIG)"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix://csi/csi.sock
+            - name: CLOUD_CONFIG
+              value: /etc/kubernetes/cloud-config
+          ports:
+            - containerPort: 9808
+              name: healthz
+              protocol: TCP
+          # The probe
+          livenessProbe:
+            failureThreshold: {{ .Values.csi.livenessprobe.failureThreshold }}
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: {{ .Values.csi.livenessprobe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.csi.livenessprobe.timeoutSeconds }}
+            periodSeconds: {{ .Values.csi.livenessprobe.periodSeconds }}
+          volumeMounts:
+            - mountPath: /sys
+              name: host-sys
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+            - mountPath: /run/mount
+              name: host-mount
+            - name: socket-dir
+              mountPath: /csi
+            - name: kubelet-dir
+              mountPath: {{ .Values.csi.plugin.nodePlugin.kubeletDir }}
+              mountPropagation: "Bidirectional"
+            - name: pods-probe-dir
+              mountPath: /dev
+              mountPropagation: "HostToContainer"
+            - mountPath: /etc/ceph/ceph.conf
+              name: ceph-etc
+              subPath: ceph.conf
+            - mountPath: /etc/ceph/keyring
+              name: ceph-keyring
+              subPath: key
+            {{- .Values.csi.plugin.volumeMounts | toYaml | trimSuffix "\n" | nindent 12 }}
+          resources: {{ toYaml .Values.csi.plugin.resources | nindent 12 }}
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: {{ .Values.csi.plugin.nodePlugin.kubeletDir }}/plugins/cinder.csi.openstack.org
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: {{ .Values.csi.plugin.nodePlugin.kubeletDir }}/plugins_registry/
+            type: Directory
+        - name: kubelet-dir
+          hostPath:
+            path: {{ .Values.csi.plugin.nodePlugin.kubeletDir }}
+            type: Directory
+        - name: pods-probe-dir
+          hostPath:
+            path: /dev
+            type: Directory
+        - name: cloud-config
+          configMap:
+            name: {{ .Release.Name }}-configmap
+            defaultMode: 0755
+        - hostPath:
+            path: /sys
+            type: ""
+          name: host-sys
+        - hostPath:
+            path: /lib/modules
+            type: ""
+          name: lib-modules
+        - hostPath:
+            path: /run/mount
+            type: ""
+          name: host-mount
+        - configMap:
+            defaultMode: 292
+            name: {{ .Values.ceph.configMapName }}
+          name: ceph-etc
+        - name: ceph-keyring
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.ceph.keyringName }}
+        {{ .Values.csi.plugin.volumes | toYaml | trimSuffix "\n" | nindent 8 }}
+      affinity: {{ toYaml .Values.csi.plugin.nodePlugin.affinity | nindent 8 }}
+      nodeSelector: {{ toYaml .Values.csi.plugin.nodePlugin.nodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .Values.csi.plugin.nodePlugin.tolerations | nindent 8 }}
+    {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+    {{- end }}
