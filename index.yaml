@@ -33,6 +33,19 @@ entries:
   - annotations:
       category: Openstack
     apiVersion: v2
+    created: "2022-03-21T05:23:22.566343528Z"
+    description: Automatic generation openstack relate password
+    digest: f2fd15981254a6a7f12aa811e614e2a5b5e1355c18f2daba438de2dc26917151
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: gen-password
+    urls:
+    - https://github.com/kungze/charts/releases/download/gen-password-1.0.3/gen-password-1.0.3.tgz
+    version: 1.0.3
+  - annotations:
+      category: Openstack
+    apiVersion: v2
     created: "2022-03-17T01:22:14.921009674Z"
     description: Automatic generation openstack relate password
     digest: cdc8dac9f0826f21b5461e26b66100926d8e478e2d593f0181a6c93d09632f31
@@ -194,6 +207,42 @@ entries:
   - annotations:
       category: Openstack
     apiVersion: v2
+    created: "2022-03-21T05:23:22.745525345Z"
+    dependencies:
+    - name: gen-password
+      repository: https://kungze.github.io/charts
+      version: 1.x.x
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+    - condition: rabbitmq.enabled
+      name: rabbitmq
+      repository: https://charts.bitnami.com/bitnami
+      version: 8.x.x
+    - condition: memcached.enabled
+      name: memcached
+      repository: https://charts.bitnami.com/bitnami
+      version: 6.x.x
+    - condition: nginx-ingress-controller.enabled
+      name: nginx-ingress-controller
+      repository: https://charts.bitnami.com/bitnami
+      version: 9.x.x
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      version: 1.x.x
+    description: Openstack dependency service
+    digest: d1532f8d41b528d5e24f1a110ff5dbd690aeb8b3cc048527d352ce9d9e882a3d
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: openstack-dep
+    urls:
+    - https://github.com/kungze/charts/releases/download/openstack-dep-1.0.2/openstack-dep-1.0.2.tgz
+    version: 1.0.2
+  - annotations:
+      category: Openstack
+    apiVersion: v2
     created: "2022-03-13T07:28:56.674299364Z"
     dependencies:
     - name: gen-password
@@ -263,4 +312,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/openstack-dep-1.0.0/openstack-dep-1.0.0.tgz
     version: 1.0.0
-generated: "2022-03-17T05:50:10.080613061Z"
+generated: "2022-03-21T05:23:22.745621024Z"
