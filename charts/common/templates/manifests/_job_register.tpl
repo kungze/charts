@@ -55,7 +55,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: keystone-admin-password
-                  name: {{ index $envAll.Values "openstack-dep" "gen-password" "secretName" | quote }}
+                  name: {{ index $envAll.Values "openstack-dep" "passwordSecretName" | quote }}
             - name: OS_AUTH_URL
               valueFrom:
                 secretKeyRef:
