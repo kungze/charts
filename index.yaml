@@ -139,6 +139,27 @@ entries:
   - annotations:
       category: Openstack
     apiVersion: v2
+    created: "2022-03-21T06:51:17.642673493Z"
+    dependencies:
+    - condition: openstack-dep.enabled
+      name: openstack-dep
+      repository: https://kungze.github.io/charts
+      version: 1.x.x
+    - name: common
+      repository: https://kungze.github.io/charts
+      version: 1.x.x
+    description: Openstack keystone service
+    digest: 652b2d4bcf0ef7b0faed7c022bc82b473e29aa1b9a0ba56245a04b15c1be7513
+    home: https://kungze.github.io/charts/
+    maintainers:
+    - name: Kungze
+    name: keystone
+    urls:
+    - https://github.com/kungze/charts/releases/download/keystone-1.0.0/keystone-1.0.0.tgz
+    version: 1.0.0
+  - annotations:
+      category: Openstack
+    apiVersion: v2
     appVersion: v1.0.0
     created: "2022-01-29T07:19:18.556768689Z"
     dependencies:
@@ -312,4 +333,4 @@ entries:
     urls:
     - https://github.com/kungze/charts/releases/download/openstack-dep-1.0.0/openstack-dep-1.0.0.tgz
     version: 1.0.0
-generated: "2022-03-21T05:23:22.745621024Z"
+generated: "2022-03-21T06:51:17.642711593Z"
