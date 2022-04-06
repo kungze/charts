@@ -1,0 +1,32 @@
+{{- $envAll := . }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cinder-bin
+  namespace: {{ .Release.Namespace | quote }}
+data:
+  db-init.sh: |
+{{- include "common.scripts.db_init" . | indent 4 }}
+  db-sync.sh: |
+{{- include "common.scripts.db_sync" . | indent 4 }}
+  ks-register-services.sh: |
+{{- include "common.scripts.ks_register_services" . | indent 4  }}
+  ks-register-users.sh: |
+{{- include "common.scripts.ks_register_users" . | indent 4  }}
+  volume-type-create.sh: |
+{{ tuple "bin/_volume_type_create.sh.tpl" . | include "common.utils.template" | indent 4 }}
+  lvm-create.sh: |
+{{ tuple "bin/_lvm_create.sh.tpl" . | include "common.utils.template" | indent 4 }}
+  lvm-clean.sh: |
+{{ tuple "bin/_lvm_clean.sh.tpl" . | include "common.utils.template" | indent 4 }}
+  configmap-render.py: |
+{{ include "common.scripts.configmap_render" . | indent 4 }}
+  update-openstack-conn-info.py: |
+{{- include "common.scripts.update_openstack_conn_info" . | indent 4  }}
+  {{- if .Values.conf.ceph.enabled }}
+  ceph-toolbox.sh: |
+{{ tuple "bin/_ceph_toolbox.sh.tpl" . | include "common.utils.template" | indent 4 }}
+  create-ceph-cm-secrets.py: |
+{{ tuple "bin/_create_ceph_cm_secrets.py.tpl" . | include "common.utils.template" | indent 4 }}
+  {{- end }}

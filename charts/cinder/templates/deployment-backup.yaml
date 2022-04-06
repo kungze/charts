@@ -1,0 +1,121 @@
+{{- if .Values.conf.backup.enabled }}
+apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: cinder-backup
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: cinder-backup
+    spec:
+      initContainers:
+        - command:
+          - kubernetes-entrypoint
+          name: init
+          image: {{ template "entrypoint.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INTERFACE_NAME
+            value: eth0
+          - name: PATH
+            value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+          - name: DEPENDENCY_SERVICE
+            value: {{ .Release.Namespace }}:{{ include "common.utils.joinListWithComma" .Values.dependencies.cinder_backup.service }}
+      containers:
+        - name: cinder-backup
+          image: {{ template "cinder.backup.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          securityContext:
+            runAsUser: 0
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                - /tmp/ceph-toolbox.sh
+          env:
+            - name: KOLLA_CONFIG_STRATEGY
+              value: "COPY_ALWAYS"
+            - name: KOLLA_SERVICE_NAME
+              value: "cinder-backup"
+            - name: PATH
+              value: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LANG
+              value: "en_US.UTF-8"
+            - name: KOLLA_BASE_DISTRO
+              value: "ubuntu"
+            - name: KOLLA_DISTRO_PYTHON_VERSION
+              value: "3.8"
+            - name: KOLLA_BASE_ARCH
+              value: "x86_64"
+            - name: SETUPTOOLS_USE_DISTUTILS
+              value: "stdlib"
+            - name: PS1
+              value: "$(tput bold)($(printenv KOLLA_SERVICE_NAME))$(tput sgr0)[$(id -un)@$(hostname -s) $(pwd)]$ "
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+          volumeMounts:
+            - mountPath: /tmp
+              name: pod-tmp
+            - mountPath: /var/log/kolla/cinder
+              name: kollalog
+            - mountPath: /var/lib/kolla/config_files/cinder.conf
+              name: cinder-etc
+              subPath: cinder.conf
+            - mountPath: /var/lib/kolla/config_files/config.json
+              name: cinder-etc
+              subPath: cinder-backup.json
+            - mountPath: /etc/ceph
+              name: etc-ceph
+            - mountPath: /tmp/ceph-toolbox.sh
+              name: cinder-bin
+              subPath: ceph-toolbox.sh
+            - mountPath: /etc/rook
+              name: mon-endpoint-volume
+      {{- if .Values.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
+      serviceAccount: {{ .Values.serviceAccountName}}
+      serviceAccountName: {{ .Values.serviceAccountName}}
+      volumes:
+        - emptyDir: {}
+          name: pod-tmp
+        - emptyDir: {}
+          name: etc-ceph
+        - name: mon-endpoint-volume
+          configMap:
+            name: {{ .Values.conf.ceph.ceph_cm_name }}
+            items:
+              - key: data
+                path: mon-endpoints
+        - hostPath:
+            path: {{ .Values.conf.kolla_log_dir }}
+            type: DirectoryOrCreate
+          name: kollalog
+        - configMap:
+            defaultMode: 0755
+            name: cinder-bin
+          name: cinder-bin
+        - configMap:
+            defaultMode: 365
+            name: cinder-etc
+          name: cinder-etc
+{{- end }}

@@ -3,6 +3,7 @@ chart-dirs:
 chart-repos:
   - kungze=https://kungze.github.io/charts
 debug: true
+helm-extra-args: --timeout 1000s
 excluded-charts:
   - helm-toolkit
   - common

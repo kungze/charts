@@ -1,0 +1,330 @@
+## @section Global parameters
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry, imagePullSecrets and storageClass
+
+## @param global.imageRegistry Global Docker image registry
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+## @param global.imageTag Global docker image tag
+## @param global.pullPolicy Global image pull policy
+global:
+  imageRegistry: docker.io
+  storageClass: ""
+  imageTag: xena
+  pullPolicy: IfNotPresent
+
+## @section Common parameters
+
+## @param replicaCount Number of cinder replicas to deploy (requires ReadWriteMany PVC support)
+replicaCount: 1
+## @param serviceAccountName ServiceAccount name
+serviceAccountName: cinder
+## Controller containers' resource requests and limits
+## ref: https://kubernetes.io/docs/user-guide/compute-resources
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+## @param resources.limits The resources limits for the Controller container
+## @param resources.requests The requested resources for the Controller container
+resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 250m
+  ##    memory: 256Mi
+  limits: {}
+  ## Examples:
+  ## requests:
+  ##    cpu: 250m
+  ##    memory: 256Mi
+  requests: {}
+## Configure Pods Security Context
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+## @param podSecurityContext.enabled Enabled cinder pods' Security Context
+## @param podSecurityContext.runAsUser Set cinder pods' Security Context runAsUser
+podSecurityContext:
+  enabled: true
+  runAsUser: 0
+## Configure Container Security Context (only main container)
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+## @param containerSecurityContext.enabled Enabled cinder containers' Security Context
+## @param containerSecurityContext.runAsUser Set cinder containers' Security Context runAsUser
+containerSecurityContext:
+  enabled: true
+  runAsUser: 0
+## Configure Container Security Context (only main container)
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+## @param lvmcontainerSecurityContext.enabled Enabled cinder lvm containers' Security Context
+## @param lvmcontainerSecurityContext.privileged Switch cinder lvm containers' privilege possibility on or off
+## @param lvmcontainerSecurityContext.runAsUser Set cinder lvm containers' Security Context runAsUser
+## @param lvmcontainerSecurityContext.allowPrivilegeEscalation Switch cinder lvm containers' privilegeEscalation possibility on or off
+lvmcontainerSecurityContext:
+  enabled: true
+  privileged: true
+  runAsUser: 0
+  allowPrivilegeEscalation: true
+## Controller containers' liveness probe. Evaluated as a template.
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+## @param livenessProbe.enabled Enable livenessProbe
+## @param livenessProbe.tcpSocket.port Port for livenessProbe
+## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+## @param livenessProbe.periodSeconds Period seconds for livenessProbe
+## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
+## @param livenessProbe.successThreshold Success threshold for livenessProbe
+livenessProbe:
+  enabled: true
+  tcpSocket:
+    port: 8776
+  failureThreshold: 3
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+## Controller containers' readiness probe. Evaluated as a template.
+## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+## @param readinessProbe.enabled Enable readinessProbe
+## @param readinessProbe.tcpSocket.port Port for readinessProbe
+## @param readinessProbe.periodSeconds Period seconds for readinessProbe
+## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
+## @param readinessProbe.successThreshold Success threshold for readinessProbe
+readinessProbe:
+  enabled: true
+  tcpSocket:
+    port: 8776
+  failureThreshold: 3
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+## @param customLivenessProbe Override default liveness probe
+customLivenessProbe: {}
+## @param customReadinessProbe Override default readiness probe
+customReadinessProbe: {}
+## @param lifecycle LifecycleHooks to set additional configuration at startup
+lifecycle: ""
+
+## @section cinder Image parameters
+
+## openstack cinder image
+image:
+  ## @param image.cinderApi.repository cinderApi image repository
+  cinderApi:
+    repository: kolla/ubuntu-binary-cinder-api
+  ## @param image.cinderVolume.repository cinderVolume image repository
+  cinderVolume:
+    repository: kolla/ubuntu-binary-cinder-volume
+  ## @param image.cinderScheduler.repository cinderScheduler image repository
+  cinderScheduler:
+    repository: kolla/ubuntu-binary-cinder-scheduler
+  ## @param image.cinderBackup.repository cinderBackup image repository
+  cinderBackup:
+    repository: kolla/ubuntu-binary-cinder-backup
+  ## @param image.dbSync.repository dbSync image repository
+  dbSync:
+    repository: kolla/ubuntu-binary-cinder-api
+  ## @param image.tgtd.repository tgtd image repository
+  tgtd:
+    repository: kolla/ubuntu-binary-tgtd
+  ## @param image.kollaToolbox.repository kollaToolbox image repository
+  kollaToolbox:
+    repository: kolla/ubuntu-binary-kolla-toolbox
+  ## @param image.entrypoint.registry entrypoint image registry
+  ## @param image.entrypoint.repository entrypoint image repository
+  ## @param image.entrypoint.tag entrypoint image tag
+  entrypoint:
+    registry: quay.io
+    repository: airshipit/kubernetes-entrypoint
+    tag: v1.0.0
+  ## @param image.cinderLoop.repository cinderLoop image repository
+  ## @param image.cinderLoop.tag cinderLoop image tag (immutable tags are recommended)
+  cinderLoop:
+    repository: docker/loop
+    tag: latest
+
+## @skip dependencies
+dependencies:
+  cinder_api:
+    jobs:
+      - cinder-db-sync
+      - cinder-register
+  cinder_scheduler:
+    service:
+      - cinder-api
+  cinder_volume:
+    service:
+      - cinder-api
+  cinder_backup:
+    service:
+      - cinder-api
+  cm_render:
+    jobs:
+      - cinder-update-openstack-conn-info
+  db_init:
+    jobs:
+      - cinder-cm-render
+  db_sync:
+    jobs:
+      - cinder-db-init
+  type_create:
+    service:
+      - cinder-api
+  register:
+    service:
+      - keystone-api
+
+## @skip endpoints
+endpoints:
+  auth:
+    secretName: keystone-admin-secret
+    cinder:
+      role: admin
+      region_name: RegionOne
+      project_name: service
+      user_domain_name: service
+      project_domain_name: service
+      username: cinder
+## @skip database
+database:
+  username: cinder
+  database: cinder
+  port: 3306
+
+## @section Cinder config file
+
+## @setion conf
+## @param conf.kolla_log_dir 存放 kolla 日志文件的目录
+## @param conf.enabled_notification_topics 是否开启 notification
+## @param conf.lvm.enabled 是否对接 lvm 后端
+## @param conf.lvm.create_loop_device 是否创建 loop 设备
+## @param conf.lvm.loop_name loop 设备名称
+## @param conf.lvm.dd_lvm_bs loop 设备块大小
+## @param conf.lvm.dd_lvm_count loop 设备写次数
+## @param conf.lvm.vg_name lvm 创建的卷组名称
+## @param conf.lvm.volume_type lvm 后端卷类型
+## @param conf.lvm.lvm_target_helper lvm target 类型 Ubuntu镜像为 tgtadm centos 镜像为 lioadm，后期优化为自动配置的
+## TODO(lvm_target_helper): 后期优化为获取镜像版本选择后端target
+## @param conf.ceph.enabled 是否对接 ceph 后端
+## @param conf.ceph.volume_type ceph 后端卷类型
+## @param conf.ceph.pool_name ceph 池名称
+## @param conf.ceph.rbd_user ceph 用户名
+## @param conf.ceph.rbd_secret_uuid ceph secret uuid
+## @param conf.ceph.size ceph pool 副本数
+## @param conf.ceph.poolFailureDomain ceph pool 失败域
+## @param conf.ceph.rook_namespace rook-ceph 命名空间
+## @param conf.ceph.rook_cm_name rook-ceph 配置信息的 configmap 名称
+## @param conf.ceph.rook_secret_name rook-ceph 密钥相关的 secrets 名称
+## @param conf.ceph.ceph_username_fields rook-ceph secrets 配置中的 username 字段
+## @param conf.ceph.ceph_secret_fields rook-ceph secrets 配置中的 keyring 字段
+## @param conf.ceph.ceph_cm_name ceph configmap 名称 读取rook-ceph命名空间中的 configmap 注册到自己的命名空间
+## @param conf.ceph.ceph_secret_name ceph secrets 名称 读取rook-ceph命名空间中的 secret 注册到自己的命名空间
+## @param conf.backup.enabled 是否对接 ceph backup
+## @param conf.backup.backup_user ceph backup pool 用户名称
+## @param conf.backup.backup_pool_name ceph backup pool 名称
+## @param conf.backup.size ceph backup pool 副本数
+conf:
+  kolla_log_dir: /var/log/kolla/cinder
+  enabled_notification_topics: false
+  lvm:
+    enabled: true
+    create_loop_device: true
+    loop_name: /dev/loop0
+    dd_lvm_bs: 1M
+    dd_lvm_count: 2048
+    vg_name: cinder-volumes
+    volume_type: lvm1
+    lvm_target_helper: tgtadm
+  ceph:
+    enabled: false
+    volume_type: rbd1
+    pool_name: volumes
+    rbd_user: admin
+    rbd_secret_uuid: ""
+    size: 1
+    poolFailureDomain: host
+    rook_namespace: rook-ceph
+    rook_cm_name: rook-ceph-mon-endpoints
+    rook_secret_name: rook-ceph-mon
+    ceph_username_fields: ceph-username
+    ceph_secret_fields: ceph-secret
+    ceph_cm_name: ceph-mon-endpoints
+    ceph_secret_name: ceph-mon
+  backup:
+    enabled: false
+    backup_user: admin
+    backup_pool_name: backups
+    size: 1
+
+## @section Traffic Exposure Parameters
+
+## cinder service parameters
+service:
+  ## @param service.cluster_domain_suffix Kubernetes Service suffix
+  cluster_domain_suffix: cluster.local
+  ## @param service.type Kubernetes Service type
+  type: ClusterIP
+  ## @param service.publicService.name cinder public svc name
+  ## @param service.publicService.port cinder public svc port
+  ## @param service.publicService.portname cinder public svc port name
+  publicService:
+    name: cinder-api
+    port: 8776
+    portname: ks-pub
+  ## @param service.internalService.name cinder internal svc name
+  ## @param service.internalService.httpPort cinder internal svc http port
+  ## @param service.internalService.httpName cinder internal svc http port name
+  ## @param service.internalService.httpsPort cinder internal svc https port
+  ## @param service.internalService.httpsName cinder internal svc https port name
+  internalService:
+    name: cinder
+    httpPort: 80
+    httpName: http
+    httpsPort: 443
+    httpsName: https
+  ## Node ports to expose
+  ## @param service.nodePorts.http Node port for HTTP
+  ## @param service.nodePorts.https Node port for HTTPS
+  ## NOTE: choose port between <30000-32767>
+  nodePorts:
+    http: ""
+    https: ""
+  ## @param service.clusterIP Cluster internal IP of the service
+  ## This is the internal IP address of the service and is usually assigned randomly.
+  ## ref: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceSpec
+  clusterIP: ""
+  ## @param service.loadBalancerIP cinder service Load Balancer IP
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
+  loadBalancerIP: ""
+  ## @param service.externalTrafficPolicy cinder service external traffic policy
+  ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
+  externalTrafficPolicy: Cluster
+## Configure the ingress resource that allows you to access the cinder installation
+## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  ## @param ingress.enabled Enable ingress record generation for cinder
+  enabled: true
+  ## @param ingress.pathType Ingress path type
+  pathType: ImplementationSpecific
+  ## @param ingress.apiVersion Force Ingress API version (automatically detected if not set)
+  apiVersion: ""
+  ## @param ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
+  ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
+  ## ref: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/
+  ingressClassName: "nginx"
+  ## @param ingress.hostname Default host for the ingress record
+  hostname: cinder
+  ## @param ingress.path Default path for the ingress record
+  ## NOTE: You may need to set this to '/*' in order to use this with ALB ingress controllers
+  path: /
+
+## @section Keystone Details
+## @param keystone.enabled [t#部署 keystone] 是否部署keystone
+keystone:
+  enabled: true
+## @param openstack-dep.enabled [t#部署 openstack 依赖环境] openstack-dep 部署跟 keystone 保持一致
+## @param openstack-dep.passwordSecretName [t#Secret Name] openstack 环境密码的 secret 名称
+## @param openstack-dep.connInfoSecret [t#ConnInfo secret name] openstack 依赖环境中生成服务URL得 secret 名称
+openstack-dep:
+  enabled: true
+  passwordSecretName: openstack-password
+  connInfoSecret: openstack-conn-info

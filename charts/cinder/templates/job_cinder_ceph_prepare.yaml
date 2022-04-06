@@ -1,0 +1,48 @@
+{{- if .Values.conf.ceph.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cinder-ceph-prepare
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: cinder-ceph-prepare
+          image: {{ template "kolla.toolbox.image" . }}
+          imagePullPolicy: {{ .Values.global.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - python /tmp/create-ceph-cm-secrets.py
+          env:
+            - name: KUBERNETES_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: ROOK_NAMESPACE
+              value: {{ .Values.conf.ceph.rook_namespace | quote }}
+            - name: ROOK_CM_NAME
+              value: {{ .Values.conf.ceph.rook_cm_name | quote }}
+            - name: ROOK_SECRETS
+              value: {{ .Values.conf.ceph.rook_secret_name | quote }}
+            - name: CM_NAME
+              value: {{ .Values.conf.ceph.ceph_cm_name | quote }}
+            - name: SECRET_NAME
+              value: {{ .Values.conf.ceph.ceph_secret_name | quote }}
+          volumeMounts:
+          - mountPath: /tmp
+            name: pod-tmp
+          - mountPath: /tmp/create-ceph-cm-secrets.py
+            name: cinder-bin
+            subPath: create-ceph-cm-secrets.py
+      restartPolicy: OnFailure
+      serviceAccount: {{ .Values.serviceAccountName}}
+      serviceAccountName: {{ .Values.serviceAccountName}}
+      volumes:
+        - emptyDir: {}
+          name: pod-tmp
+        - name: cinder-bin
+          configMap:
+            defaultMode: 0755
+            name: cinder-bin
+{{- end }}

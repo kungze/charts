@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.internalService.name }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  ports:
+    - name: {{ .Values.service.internalService.httpName }}
+      port: {{ .Values.service.internalService.httpPort }}
+      protocol: TCP
+      targetPort:  {{ .Values.service.internalService.httpPort }}
+    - name: {{ .Values.service.internalService.httpsName }}
+      port: {{ .Values.service.internalService.httpsPort }}
+      protocol: TCP
+      targetPort: {{ .Values.service.internalService.httpsPort }}
+  selector:
+    app: ingress-api
+  type: {{ .Values.service.type }}
